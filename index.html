@@ -230,6 +230,7 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
   <div class="tab" onclick="switchTab('comps', this)">Comps</div>
   <div class="tab" onclick="switchTab('rehab', this)">Rehab Budget</div>
   <div class="tab" onclick="switchTab('summary', this)">Deal Summary</div>
+  <div class="tab" onclick="switchTab('advisor', this)">Deal Advisor</div>
   <div class="tab" onclick="switchTab('sensitivity', this)">Sensitivity</div>
 </div>
 
@@ -238,9 +239,9 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
 
   <div class="cta-box">
     <div class="cta-left">
-      <div class="cta-logo">Beachport Asset Group, LLC</div>
+      <div class="cta-logo">Beachport Asset Group, LLC &nbsp;·&nbsp; <span style="color:#fc8181;">Florida Deals Only</span></div>
       <div class="cta-title">Want to wholesale or JV this deal?</div>
-      <div class="cta-body">If the numbers work but you need a buyer or a capital partner, Beachport Asset Group acquires deals and structures joint ventures with investors across Florida. Reach out — we move fast.</div>
+      <div class="cta-body">If the numbers work but you need a buyer or a capital partner, Beachport Asset Group acquires deals and structures joint ventures with investors throughout Florida. <strong style="color:#90cdf4;">We only buy in Florida</strong> — if your deal is here, reach out. We move fast.</div>
     </div>
     <div class="cta-right">
       <div class="cta-contact-item">
@@ -257,7 +258,7 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
           <div class="cta-contact-sub">Email us your deal</div>
         </div>
       </div>
-      <button class="cta-btn" onclick="window.location.href='mailto:beachportassetgroup@gmail.com?subject=Deal%20Inquiry'">Send Us This Deal →</button>
+      <button class="cta-btn" onclick="sendDealEmail()">Send Us This Deal →</button>
     </div>
   </div>
 
@@ -283,6 +284,7 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
         <div class="form-group wide">
           <label>Street Address</label>
           <input type="text" id="i_address" value="123 Main Street" oninput="recalc()">
+          <span class="input-hint">Not ready to share the exact address? A nearby cross-street or approximate location works fine — we evaluate deals on the numbers.</span>
         </div>
         <div class="form-group wide">
           <label>Description</label>
@@ -693,6 +695,11 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
 
 </div>
 
+<!-- ══════════ DEAL ADVISOR ══════════ -->
+<div class="panel" id="panel-advisor">
+  <div id="advisor-content" style="max-width:900px;"></div>
+</div>
+
 <!-- ══════════ SENSITIVITY ══════════ -->
 <div class="panel" id="panel-sensitivity">
 
@@ -776,13 +783,7 @@ td input:focus { outline: none; border-color: #4299e1; background: white; }
 // ═══════════════════════════════════════════
 
 const DEFAULT_COMPS = [
-  { address: '3426 1st Pl',  salePrice: 248000, sf: 864,  notes: '2/2 dated, mint condition, no garage or driveway', included: true, condition: 'well-kept' },
-  { address: '3466 3rd St',  salePrice: 276000, sf: 1303, notes: '2/2 dated, okay condition, no garage',             included: true, condition: 'grandma'   },
-  { address: '2275 4th Ln',  salePrice: 290000, sf: 981,  notes: '3/2 with minor updates, good condition, garage',   included: true, condition: 'well-kept' },
-  { address: '275 20th Ave', salePrice: 315000, sf: 1300, notes: '3/2 w garage, metal roof, sunroom, full flip',     included: true, condition: 'renovated' },
-  { address: '2390 6th St',  salePrice: 300000, sf: 1174, notes: '2/2 w garage, recent updates and roof, very clean',included: true, condition: 'well-kept' },
-  { address: '740 17th Ave', salePrice: 340000, sf: 1386, notes: '3/2 w garage, metal roof, full flip',              included: true, condition: 'renovated' },
-  { address: '1816 4th Pl',  salePrice: 285000, sf: 850,  notes: '2/2 no garage, full flip',                         included: true, condition: 'renovated' },
+  { address: '', salePrice: 0, sf: 0, notes: '', included: true, condition: 'well-kept' },
 ];
 
 // mode:'psf' → cost = rate × SF;  mode:'lump' → cost = amount
@@ -1364,6 +1365,7 @@ function updateOutputs() {
   drawProfitWaterfall('profit-wf-svg', d);
   drawROIGauge('roi-gauge-svg', d.roi);
   buildSensitivity();
+  buildAdvisor();
   autosave();
 }
 
@@ -1781,6 +1783,302 @@ function newDeal() {
 }
 
 // ═══════════════════════════════════════════
+// DEAL ADVISOR
+// ═══════════════════════════════════════════
+
+function buildAdvisor() {
+  const el = document.getElementById('advisor-content');
+  if (!el) return;
+
+  const d = calcDeal();
+  const bestRes   = calcDeal(undefined, d.arvBest);
+  const likelyRes = calcDeal(undefined, d.arvLikely);
+  const worstRes  = calcDeal(undefined, d.arvWorst);
+
+  const activeComps = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  const avgPSF = getAvgPSF();
+  const medPSF = getMedianPSF();
+  const sf = d.sf;
+  const rehabPSF = sf > 0 ? d.rehabTotal / sf : 0;
+  const rehabPctOfArv = d.arvLikely > 0 ? d.rehabTotal / d.arvLikely : 0;
+
+  // Max offer vs current price (target profit from inputs)
+  const moNet    = d.arvLikely * (1 - d.realtorPct) - d.sellerFees;
+  const maxOffer = moNet - d.rehabTotal - d.buyerFees - d.propTaxes - num('i_targetProfit') - d.financingCost;
+  const priceGap = d.purchase - maxOffer; // positive = overpaying
+
+  // Comp spread
+  const psfVals  = activeComps.map(c => c.salePrice / c.sf);
+  const psfSpread = psfVals.length > 1
+    ? (Math.max(...psfVals) - Math.min(...psfVals)) / (avgPSF || 1)
+    : 0;
+  const avgMedDiv = avgPSF && medPSF ? Math.abs(avgPSF - medPSF) / avgPSF : 0;
+
+  const lp = likelyRes.profit;
+  const lr = likelyRes.roi;
+  const wp = worstRes.profit;
+  const bp = bestRes.profit;
+
+  // ── VERDICT ──────────────────────────────
+  let verdict, verdictColor, verdictBg, verdictDesc;
+  if      (lp > 30000 && lr > 0.18 && wp > 0)         { verdict = 'Strong Deal';            verdictColor = '#276749'; verdictBg = '#c6f6d5'; verdictDesc = 'This deal pencils in all three scenarios. There is real margin here and it can absorb surprises.'; }
+  else if (lp > 20000 && lr > 0.12 && wp > -10000)     { verdict = 'Good Deal';              verdictColor = '#276749'; verdictBg = '#d4edda'; verdictDesc = 'Solid numbers in the likely case. Keep a close eye on rehab execution — do not let costs creep.'; }
+  else if (lp > 0     && lr > 0.08)                    { verdict = 'Marginal Deal';          verdictColor = '#744210'; verdictBg = '#fef3c7'; verdictDesc = 'The deal technically works but there is not much room for error. One bad surprise could wipe the profit.'; }
+  else if (lp > 0     && lr <= 0.08)                   { verdict = 'Too Thin';               verdictColor = '#744210'; verdictBg = '#fef3c7'; verdictDesc = 'Profit exists on paper but ROI is too low. No serious investor will tie up capital for this return.'; }
+  else if (lp <= 0    && bp > 0)                       { verdict = 'Best Case Only';         verdictColor = '#c53030'; verdictBg = '#fff5f5'; verdictDesc = 'Only profitable if everything goes perfectly. That is not investing — that is gambling.'; }
+  else                                                  { verdict = 'Losing Deal';            verdictColor = '#c53030'; verdictBg = '#fff5f5'; verdictDesc = 'This deal loses money in the likely case. Something major has to change before this gets presented to a buyer.'; }
+
+  // ── ISSUES ───────────────────────────────
+  const issues = [], wins = [], fixes = [];
+
+  // Purchase price vs max offer
+  if (d.purchase > 0 && d.arvLikely > 0) {
+    if (priceGap > 0) {
+      issues.push({ sev: priceGap > 20000 ? 'high' : 'medium', title: 'Purchase price is too high', body: `The ask is ${fmt(d.purchase)}, but the max purchase price that still hits your ${fmt(num('i_targetProfit'))} profit target is ${fmt(Math.max(0, maxOffer))}. That is ${fmt(priceGap)} over the line. At this price the deal does not hit your target even in the likely case — and that is before any cost overruns.` });
+      fixes.push(`Get the purchase price down to ${fmt(Math.max(0, maxOffer))} or below. If the seller will not move that far, walk away. No amount of optimism fixes a deal bought at the wrong price.`);
+    } else {
+      wins.push(`Purchase price is ${fmt(Math.abs(priceGap))} below the max offer. You have built-in cushion to absorb cost overruns or a softer sale price without blowing up the deal.`);
+    }
+  }
+
+  // Rehab as % of ARV
+  if (d.rehabTotal > 0 && d.arvLikely > 0) {
+    if (rehabPctOfArv > 0.35) {
+      issues.push({ sev: 'high', title: 'Rehab is very heavy relative to ARV', body: `Rehab is ${fmt(d.rehabTotal)}, which is ${Math.round(rehabPctOfArv * 100)}% of your likely ARV. That is a lot. Heavy rehabs are where profits go to die — every scope creep, permit delay, or contractor no-show multiplies. At this level you need hard contractor bids in hand, not ballpark estimates. If those bids come in higher, the deal falls apart.` });
+      fixes.push(`Audit every line item in the Rehab Budget tab. What can be deferred, value-engineered, or cut entirely? Each $5,000 you trim from rehab goes straight to your profit.`);
+    } else if (rehabPctOfArv > 0.22) {
+      issues.push({ sev: 'medium', title: 'Rehab is moderate to heavy', body: `Rehab is ${Math.round(rehabPctOfArv * 100)}% of ARV (${fmt(d.rehabTotal)}). Not disqualifying, but this deal is sensitive to cost overruns. The contingency line needs to hold and contractor bids need to be firm before you commit.` });
+    } else {
+      wins.push(`Rehab is only ${Math.round(rehabPctOfArv * 100)}% of likely ARV — a manageable scope that leaves room for a real profit margin.`);
+    }
+  }
+
+  // Rehab $/SF sanity check
+  if (rehabPSF > 0 && rehabPSF < 12 && d.rehabTotal > 5000) {
+    issues.push({ sev: 'medium', title: 'Rehab budget may be underestimated', body: `At ${fmtPSF(rehabPSF)}/SF, the budget looks very light. Florida flips rarely come in under $15/SF unless it is truly paint-and-carpet. Make sure every system — roof, AC, plumbing, electric — has a number assigned. A surprise on any one of those can easily exceed what is budgeted here.` });
+    fixes.push(`Walk the rehab budget line by line with a contractor before locking in your offer. Underestimating rehab is the single most common reason flips lose money.`);
+  }
+  if (rehabPSF > 75) {
+    issues.push({ sev: 'medium', title: 'Rehab cost per SF is very high', body: `At ${fmtPSF(rehabPSF)}/SF this is gut-renovation territory. That level of spend is only justified if the ARV reflects a true top-of-market finished product. Make sure your comps are renovated properties — if any are dated or grandma-house condition, the ARV is inflated relative to what you are building.` });
+  }
+
+  // Comps
+  if (activeComps.length === 0) {
+    issues.push({ sev: 'high', title: 'No comps entered', body: 'Without comps the ARV is a guess, and every number downstream — profit, ROI, max offer — is meaningless. You cannot present this deal to a buyer without sold comparables. Pull them first.' });
+    fixes.push('Go to the Comps tab and enter 5 to 8 sold properties within half a mile, sold in the last 6 months, matching on bed count and square footage.');
+  } else if (activeComps.length < 3) {
+    issues.push({ sev: 'medium', title: 'Too few comps to trust the ARV', body: `You only have ${activeComps.length} active comp${activeComps.length === 1 ? '' : 's'}. That is not enough to establish a reliable value. One outlier sale can skew the entire average when the sample is this small.` });
+    fixes.push(`Add at least ${3 - activeComps.length} more comparable sold properties before presenting this deal. Aim for 5 to 8.`);
+  } else if (activeComps.length >= 5) {
+    wins.push(`${activeComps.length} active comps gives a solid data set. The ARV estimate is well-supported by the market.`);
+  }
+
+  // Comp spread
+  if (psfVals.length >= 3 && psfSpread > 0.30) {
+    issues.push({ sev: 'medium', title: 'Comp $/SF spread is very wide', body: `Your comps span more than ${Math.round(psfSpread * 100)}% around the average $/SF. That tells you the market has a lot of variability — renovated 3/2s with garages are selling alongside dated 2/1s without them, and the values do not overlap cleanly. Your ARV could realistically land well above or below the average, which makes the profit estimate unreliable.` });
+    fixes.push('Review your comp set for properties that are not truly comparable to your subject. A renovated 3/2 with a garage will inflate the average if your subject has neither. Exclude outliers and tighten the comp pool.');
+  } else if (psfVals.length >= 3 && psfSpread < 0.12) {
+    wins.push(`Comp $/SF spread is tight at ${Math.round(psfSpread * 100)}%. The market is consistent and the ARV estimate is reliable.`);
+  }
+
+  // Avg vs median divergence
+  if (avgMedDiv > 0.10 && activeComps.length >= 3) {
+    issues.push({ sev: 'medium', title: 'Average $/SF is being pulled by outliers', body: `Your average $/SF (${fmtPSF(avgPSF)}) is more than 10% higher than your median (${fmtPSF(medPSF)}). That gap means one or two high-end sales are pulling the average up. If your subject property cannot realistically match those top comps — different bed count, no garage, no pool, dated finishes — then your ARV is optimistic and the profit is overstated.` });
+    fixes.push(`Consider using the median $/SF (${fmtPSF(medPSF)}) as your likely-case ARV benchmark. It is a more conservative and defensible number when the average is skewed high.`);
+  }
+
+  // Worst case survival
+  if (wp < -15000) {
+    issues.push({ sev: wp < -30000 ? 'high' : 'medium', title: 'Worst case is a serious loss', body: `If the market softens and the property sells at the worst-case ARV (${Math.round(d.worstPct * 100)}% of comp avg), this deal loses ${fmt(Math.abs(wp))}. That is not a rounding error — it is a deal that could seriously hurt an investor. Buyers who know what they are doing will see this fragility and either walk or lowball.` });
+  } else if (wp > 0) {
+    wins.push(`Even in the worst case (${Math.round(d.worstPct * 100)}% of comp avg), this deal still returns ${fmt(wp)}. That durability makes it a lot easier to present to a buyer.`);
+  }
+
+  // Contingency
+  const contingencyPct = num('i_contingency');
+  if (contingencyPct < 10) {
+    issues.push({ sev: 'medium', title: 'Contingency is dangerously low', body: `A ${contingencyPct}% contingency is not enough buffer. Experienced flippers use 10 to 15% minimum because unexpected costs are the rule, not the exception — hidden rot behind drywall, permit complications, a contractor who goes AWOL, material price jumps. A low contingency means the profit number on this page is lying to you.` });
+    fixes.push(`Raise the contingency to at least 10%, or 15% on older homes. If the deal only works with a 5% contingency, it does not really work.`);
+  }
+
+  // Holding period
+  if (d.holdMonths > 6) {
+    issues.push({ sev: d.holdMonths > 9 ? 'high' : 'low', title: 'Long holding period adds risk', body: `A ${d.holdMonths}-month projected hold means ${d.holdMonths} months of taxes, insurance, and market exposure. If interest rates move, the market cools, or rehab runs long, a long hold amplifies every problem. Most active buyers prefer deals they can complete and list in under 5 months.` });
+  }
+
+  // ROI floor
+  if (lp > 0 && lr < 0.12) {
+    issues.push({ sev: lr < 0.08 ? 'high' : 'medium', title: 'ROI is below what most buyers require', body: `The likely-case ROI is ${fmtPct(lr)}. Most experienced flippers will not touch a deal under 15 to 20% ROI — the risk of a cost overrun, a slow market, or a bad contractor wipes the return entirely at this margin. This is not a deal someone is going to get excited about.` });
+  }
+
+  // ── BUYER PERSPECTIVE ─────────────────────
+  let buyerPov;
+  if (lp > 25000 && lr > 0.15) {
+    buyerPov = `An experienced buyer looks at this and sees a deal worth pursuing. The likely profit of ${fmt(lp)} at a ${fmtPct(lr)} ROI clears the threshold most active flippers set. If you are wholesaling this, you can realistically ask for an assignment fee and have buyers compete for it — this is the kind of deal that moves fast.`;
+  } else if (lp > 10000 && lr > 0.10) {
+    buyerPov = `A buyer will look at this and want to negotiate. The numbers are not bad but they are not exciting either. To get serious interest, the purchase price needs to leave enough room for the buyer to hit their own return target after paying your assignment fee. Right now the margin is thin enough that your fee competes directly with their profit. Come to the table with comps tight and rehab scoped to the dollar.`;
+  } else if (lp > 0) {
+    buyerPov = `Most buyers will pass on this or come in very low. The margin is too thin to absorb an assignment fee, unexpected costs, and still return enough to justify the risk and effort. As a bird dog, your job is to bring deals that make investors want to say yes immediately — this one will generate questions, not offers. It needs to get cheaper.`;
+  } else {
+    buyerPov = `This deal does not work as presented, and no serious buyer will take it at these numbers. Do not waste a buyer's time by sending it as-is — that hurts your credibility. Your job right now is to figure out if the seller will come down enough to make it work, or move on to the next deal. A bad deal presented confidently is still a bad deal.`;
+  }
+
+  // ── RENDER ────────────────────────────────
+  const sevColor  = { high: '#c53030', medium: '#744210', low: '#2b6cb0' };
+  const sevBg     = { high: '#fff5f5', medium: '#fffbeb', low: '#ebf8ff' };
+  const sevBorder = { high: '#feb2b2', medium: '#fef08a', low: '#90cdf4' };
+
+  const issueHTML = issues.map(({ sev, title, body }) => `
+    <div style="background:${sevBg[sev]};border:1px solid ${sevBorder[sev]};border-left:4px solid ${sevColor[sev]};border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+      <div style="font-weight:700;color:${sevColor[sev]};margin-bottom:6px;font-size:13px;">⚠ ${title}</div>
+      <div style="font-size:13px;color:#4a5568;line-height:1.7;">${body}</div>
+    </div>`).join('');
+
+  const winHTML = wins.map(w => `
+    <div style="background:#f0fff4;border:1px solid #9ae6b4;border-left:4px solid #38a169;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+      <div style="font-size:13px;color:#276749;line-height:1.7;">✓ ${w}</div>
+    </div>`).join('');
+
+  const fixHTML = fixes.length
+    ? fixes.map((f, i) => `
+        <div style="display:flex;gap:12px;margin-bottom:14px;align-items:flex-start;">
+          <div style="background:#4299e1;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;">${i + 1}</div>
+          <div style="font-size:13px;color:#2d3748;line-height:1.7;">${f}</div>
+        </div>`).join('')
+    : '<div style="font-size:13px;color:#718096;font-style:italic;">No critical fixes needed — focus on locking in the rehab bids and executing.</div>';
+
+  const scenarioRows = [
+    ['Best Case',   d.arvBest,   bestRes.profit,   bestRes.roi,   d.bestPct,   '#276749', '#f0fff4'],
+    ['Likely Case', d.arvLikely, likelyRes.profit, likelyRes.roi, d.likelyPct, '#2b6cb0', '#ebf8ff'],
+    ['Worst Case',  d.arvWorst,  worstRes.profit,  worstRes.roi,  d.worstPct,  '#c53030', '#fff5f5'],
+  ].map(([label, arv, profit, roi, pct, color, bg]) => {
+    const outcome = profit > 20000 ? 'Works well' : profit > 0 ? 'Barely works' : 'Loses money';
+    const note = profit > 20000
+      ? `Sells at ${Math.round(pct * 100)}% of comp avg. Strong return — deal holds up.`
+      : profit > 0
+      ? `Sells at ${Math.round(pct * 100)}% of comp avg. Slim margin — zero room for error.`
+      : `Sells at ${Math.round(pct * 100)}% of comp avg. Costs exceed the sale price by ${fmt(Math.abs(profit))}.`;
+    return `
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #f0f4f8;">
+        <div style="background:${bg};color:${color};border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-top:1px;">${label}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;color:#2d3748;font-weight:600;">${outcome} — ${fmt(profit)} profit (${fmtPct(roi)} ROI)</div>
+          <div style="font-size:12px;color:#718096;margin-top:3px;">${note}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:11px;color:#a0aec0;">ARV</div>
+          <div style="font-size:13px;font-weight:700;color:${color};">${fmt(arv)}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="background:${verdictBg};border:2px solid ${verdictColor}44;border-radius:12px;padding:22px 26px;margin-bottom:22px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${verdictColor};opacity:0.8;margin-bottom:4px;">Deal Verdict</div>
+        <div style="font-size:28px;font-weight:900;color:${verdictColor};letter-spacing:-0.5px;margin-bottom:8px;">${verdict}</div>
+        <div style="font-size:14px;color:#4a5568;line-height:1.65;">${verdictDesc}</div>
+      </div>
+      <div style="display:flex;gap:28px;flex-shrink:0;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#718096;margin-bottom:4px;">Likely Profit</div>
+          <div style="font-size:26px;font-weight:800;color:${lp >= 0 ? '#276749' : '#c53030'};">${fmt(lp)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:#718096;margin-bottom:4px;">Likely ROI</div>
+          <div style="font-size:26px;font-weight:800;color:${lr >= 0.12 ? '#276749' : lr >= 0 ? '#744210' : '#c53030'};">${fmtPct(lr)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-bottom:22px;">
+      <div>
+        ${issues.length ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#2d3748;margin-bottom:12px;">Problems (${issues.length})</div>${issueHTML}` : ''}
+        ${wins.length ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#2d3748;margin-bottom:12px;${issues.length ? 'margin-top:20px;' : ''}">What Is Working</div>${winHTML}` : ''}
+        ${!issues.length && !wins.length ? '<div style="font-size:13px;color:#a0aec0;padding:12px 0;">Enter deal data to see the analysis.</div>' : ''}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#2d3748;margin-bottom:12px;">How to Fix It</div>
+        <div style="background:white;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:18px 20px;margin-bottom:20px;">
+          ${fixHTML}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#2d3748;margin-bottom:12px;">What a Buyer Sees</div>
+        <div style="background:linear-gradient(135deg,#1a202c,#2d3748);border-radius:10px;padding:18px 20px;">
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.75;">${buyerPov}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:white;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;">
+      <div class="section-header">Scenario Breakdown — Plain English</div>
+      <div class="section-body">${scenarioRows}</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// SEND DEAL EMAIL
+// ═══════════════════════════════════════════
+
+function sendDealEmail() {
+  const d = calcDeal();
+  const address     = document.getElementById('i_address').value || '(no address)';
+  const desc        = document.getElementById('i_desc').value || '—';
+  const sf          = num('i_sf') || '—';
+  const bestRes     = calcDeal(undefined, d.arvBest);
+  const likelyRes   = calcDeal(undefined, d.arvLikely);
+  const worstRes    = calcDeal(undefined, d.arvWorst);
+  const activeComps = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  const avgPSF      = getAvgPSF();
+  const arvCase     = document.getElementById('i_maxOfferArv')?.value || 'likely';
+  const moArv       = arvCase === 'best' ? d.arvBest : arvCase === 'worst' ? d.arvWorst : d.arvLikely;
+  const moNet       = moArv * (1 - d.realtorPct) - d.sellerFees;
+  const maxOffer    = moNet - d.rehabTotal - d.buyerFees - d.propTaxes - num('i_targetProfit') - d.financingCost;
+
+  const body = [
+    'DEAL SUBMISSION — Beachport Asset Group',
+    '========================================',
+    '',
+    'PROPERTY',
+    `  Address:       ${address}`,
+    `  Description:   ${desc}`,
+    `  Square Feet:   ${sf} SF`,
+    '',
+    'ACQUISITION',
+    `  Purchase Price:      ${fmt(d.purchase)}`,
+    `  Buyer Closing Fees:  ${fmt(d.buyerFees)}`,
+    `  Holding Period:      ${d.holdMonths} months`,
+    '',
+    'COMPS',
+    `  Active Comps:  ${activeComps.length}`,
+    `  Avg $/SF:      ${avgPSF ? fmtPSF(avgPSF) : 'n/a'}`,
+    '',
+    'REHAB',
+    `  Subtotal:      ${fmt(d.rehabSub)}`,
+    `  Contingency:   ${fmt(d.contingencyAmt)}`,
+    `  Total Rehab:   ${fmt(d.rehabTotal)}`,
+    '',
+    `TOTAL CASH IN:   ${fmt(d.totalCashIn)}`,
+    '',
+    'SCENARIOS',
+    `  Best Case   — ARV: ${fmt(d.arvBest)}   | Profit: ${fmt(bestRes.profit)}   | ROI: ${fmtPct(bestRes.roi)}`,
+    `  Likely Case — ARV: ${fmt(d.arvLikely)} | Profit: ${fmt(likelyRes.profit)} | ROI: ${fmtPct(likelyRes.roi)}`,
+    `  Worst Case  — ARV: ${fmt(d.arvWorst)}  | Profit: ${fmt(worstRes.profit)}  | ROI: ${fmtPct(worstRes.roi)}`,
+    '',
+    'MAX OFFER (to hit target profit):',
+    `  Target Profit: ${fmt(num('i_targetProfit'))}`,
+    `  ARV Used:      ${fmt(moArv)} (${arvCase})`,
+    `  Max Offer:     ${fmt(Math.max(0, maxOffer))}`,
+    '',
+    '----------------------------------------',
+    'Generated by Beachport Flip Deal Calculator',
+  ].join('\n');
+
+  const subject = encodeURIComponent('Deal Submission: ' + address);
+  const bodyEnc = encodeURIComponent(body);
+  window.location.href = 'mailto:beachportassetgroup@gmail.com?subject=' + subject + '&body=' + bodyEnc;
+}
+
+// ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 
@@ -1790,6 +2088,8 @@ if (window.__DEAL_DATA__) {
   applyState(window.__DEAL_DATA__);
 } else {
   loadAutosave();
+  // Always start comps fresh — autosave restores inputs and rehab but not comps
+  comps = JSON.parse(JSON.stringify(DEFAULT_COMPS));
 }
 renderComps();
 renderRehabItems();
