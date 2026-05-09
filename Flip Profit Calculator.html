@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flip Deal Calculator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a202c; font-size: 14px; }
+
+/* ── Header ── */
+.header { background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.app-title { font-size: 16px; font-weight: 700; color: #90cdf4; letter-spacing: -0.3px; }
+.address-display { font-size: 15px; font-weight: 600; color: white; }
+.address-sub { font-size: 12px; color: #a0aec0; }
+.header-right { display: flex; gap: 10px; align-items: center; }
+.btn { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: #4299e1; color: white; }
+.btn-ghost { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+.btn-danger { background: #fc8181; color: #742a2a; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-add { background: #c6f6d5; color: #276749; }
+.btn-remove { background: #fed7d7; color: #742a2a; }
+
+/* ── Status badge ── */
+.status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; }
+.badge-loss { background: #fed7d7; color: #c53030; }
+.badge-marginal { background: #fef3c7; color: #92400e; }
+.badge-profit { background: #c6f6d5; color: #276749; }
+
+/* ── Tabs ── */
+.tabs { background: #2d3748; padding: 0 32px; display: flex; gap: 0; overflow-x: auto; }
+.tab { padding: 11px 18px; color: #a0aec0; cursor: pointer; font-size: 13px; font-weight: 500; border-bottom: 3px solid transparent; white-space: nowrap; transition: color 0.15s; }
+.tab:hover { color: #e2e8f0; }
+.tab.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+
+/* ── Panels ── */
+.panel { display: none; padding: 28px 32px 56px; max-width: 1100px; }
+.panel.active { display: block; }
+
+/* ── Section ── */
+.section { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; }
+.section-header { background: #f7fafc; padding: 12px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 13px; color: #2d3748; display: flex; align-items: center; justify-content: space-between; }
+.section-body { padding: 20px; }
+
+/* ── Form grid ── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.wide { grid-column: span 2; }
+label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #718096; }
+input[type=text], input[type=number] {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 6px;
+  font-size: 14px; color: #1a202c; background: #ebf8ff;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type=text]:focus, input[type=number]:focus { outline: none; border-color: #4299e1; background: #fff; }
+.input-hint { font-size: 11px; color: #a0aec0; }
+
+/* ── Metric cards ── */
+.card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card { background: white; border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: #a0aec0; margin-bottom: 6px; }
+.card-value { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: #1a202c; }
+.card-value.neg { color: #e53e3e; }
+.card-value.pos { color: #276749; }
+.card-sub { font-size: 11px; color: #a0aec0; margin-top: 3px; }
+
+/* ── Waterfall ── */
+.wf-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f7fafc; font-size: 13px; }
+.wf-row:last-child { border-bottom: none; }
+.wf-indent { padding-left: 14px; color: #4a5568; }
+.wf-section { font-weight: 700; color: #2d3748; padding-top: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.wf-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+.wf-total { font-weight: 800; font-size: 15px; background: #1a202c; color: white; margin: 12px -20px -20px; padding: 12px 20px; display: flex; justify-content: space-between; }
+.wf-total .wf-val.neg { color: #feb2b2; }
+.wf-total .wf-val.pos { color: #9ae6b4; }
+
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #2d3748; color: white; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+th.r { text-align: right; }
+td { padding: 8px 12px; border-bottom: 1px solid #f0f4f8; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f7fafc; }
+td.r { text-align: right; font-variant-numeric: tabular-nums; }
+td input { border: 1.5px solid #e2e8f0; border-radius: 5px; padding: 5px 8px; font-size: 13px; background: #ebf8ff; width: 100%; }
+td input:focus { outline: none; border-color: #4299e1; background: white; }
+.psf-val { font-weight: 700; color: #2b6cb0; }
+.stat-row td { background: #f7fafc; font-style: italic; color: #718096; }
+.avg-row td { background: #ebf8ff !important; color: #2b6cb0 !important; font-weight: 700; font-style: normal; }
+.arv-row td { background: #e6fffa !important; color: #276749 !important; font-weight: 700; }
+.rehab-total-row td { background: #1a202c; color: white; font-weight: 700; }
+
+/* ── Pulse animations ── */
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(154,230,180,0); }
+  50%       { box-shadow: 0 0 14px 5px rgba(154,230,180,0.45); }
+}
+@keyframes pulseBlue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(144,205,244,0); }
+  50%       { box-shadow: 0 0 14px 5px rgba(144,205,244,0.45); }
+}
+@keyframes pulseRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(254,178,178,0); }
+  50%       { box-shadow: 0 0 14px 5px rgba(254,178,178,0.45); }
+}
+
+/* ── Scenarios ── */
+.scenario-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.scenario-card { border-radius: 10px; padding: 16px 18px; border: 2px solid transparent; }
+.scenario-card.best   { background: #f0fff4; border-color: #9ae6b4; animation: pulseGreen 3.2s ease-in-out infinite; }
+.scenario-card.likely { background: #ebf8ff; border-color: #90cdf4; animation: pulseBlue  3.2s ease-in-out infinite 0.4s; }
+.scenario-card.worst  { background: #fff5f5; border-color: #feb2b2; animation: pulseRed   3.2s ease-in-out infinite 0.8s; }
+.scenario-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.scenario-card.best .scenario-label { color: #276749; }
+.scenario-card.likely .scenario-label { color: #2b6cb0; }
+.scenario-card.worst .scenario-label { color: #c53030; }
+.scenario-arv { font-size: 13px; color: #718096; margin-bottom: 4px; }
+.scenario-profit { font-size: 20px; font-weight: 800; }
+.scenario-card.best .scenario-profit { color: #276749; }
+.scenario-card.likely .scenario-profit { color: #2b6cb0; }
+.scenario-card.worst .scenario-profit { color: #c53030; }
+.scenario-roi { font-size: 12px; font-weight: 600; margin-top: 2px; }
+
+/* ── Max offer box ── */
+.max-offer { background: linear-gradient(135deg, #ebf8ff, #bee3f8); border: 1px solid #90cdf4; border-radius: 10px; padding: 20px 22px; animation: pulseBlue 3.2s ease-in-out infinite 1.2s; }
+.max-offer-amount { font-size: 36px; font-weight: 900; color: #2b6cb0; letter-spacing: -1px; }
+.max-offer-label { font-size: 12px; color: #2c5282; margin-top: 4px; }
+.max-offer-detail { font-size: 12px; color: #4a5568; margin-top: 12px; line-height: 1.6; }
+
+/* ── Sensitivity ── */
+.sensitivity-wrap { overflow-x: auto; margin-bottom: 24px; }
+.sens-table { border-collapse: collapse; font-size: 12px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.sens-table th { background: #2d3748; color: white; padding: 9px 14px; text-align: center; font-size: 11px; white-space: nowrap; min-width: 90px; }
+.sens-table th.row-head { text-align: left; min-width: 110px; }
+.sens-table td { padding: 8px 14px; text-align: center; border: 1px solid #e2e8f0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sens-table td.row-head { text-align: left; background: #f7fafc; font-weight: 700; color: #2d3748; border-right: 2px solid #cbd5e0; }
+.sens-table tr.cur-row td.row-head { background: #fef3c7; }
+.center-cell { outline: 3px solid #d69e2e !important; outline-offset: -3px; }
+.color-key { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; font-size: 12px; color: #4a5568; }
+.key-item { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+/* ── Bar chart ── */
+.bar-chart { margin-top: 4px; }
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 12px; }
+.bar-name { width: 150px; flex-shrink: 0; color: #4a5568; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 16px; background: #edf2f7; border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.bar-lump { background: #4299e1; }
+.bar-sf { background: #9f7aea; }
+.bar-amount { width: 64px; text-align: right; font-variant-numeric: tabular-nums; color: #2d3748; font-weight: 600; flex-shrink: 0; }
+
+/* ── Toggle ── */
+.toggle-yes { background: #c6f6d5; color: #276749; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; min-width: 38px; }
+.toggle-no { background: #fed7d7; color: #c53030; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; min-width: 38px; }
+
+/* ── Two col ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } .scenario-grid { grid-template-columns: 1fr; } }
+
+.divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
+
+/* ── Footer ── */
+.site-footer { background: #1a202c; color: #718096; padding: 16px 32px; font-size: 11px; line-height: 1.65; border-top: 1px solid #2d3748; }
+.site-footer strong { color: #a0aec0; }
+.site-footer .footer-row { display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; }
+.site-footer .footer-disclaimer { flex: 2; min-width: 260px; }
+.site-footer .footer-ip { flex: 1; min-width: 200px; border-left: 1px solid #2d3748; padding-left: 20px; }
+@media (max-width: 640px) { .site-footer .footer-ip { border-left: none; padding-left: 0; border-top: 1px solid #2d3748; padding-top: 10px; } }
+
+/* ── CTA Box ── */
+.cta-box { background: linear-gradient(135deg, #1a202c 0%, #2a4365 100%); border: 1px solid #2b6cb0; border-radius: 10px; padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; margin-bottom: 20px; }
+.cta-left { flex: 1; min-width: 220px; }
+.cta-logo { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #63b3ed; margin-bottom: 6px; }
+.cta-title { font-size: 17px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.3; }
+.cta-body { font-size: 13px; color: #90cdf4; line-height: 1.6; }
+.cta-right { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.cta-contact-item { display: flex; align-items: center; gap: 10px; }
+.cta-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(99,179,237,0.15); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.cta-contact-text { font-size: 14px; font-weight: 700; color: white; }
+.cta-contact-sub { font-size: 11px; color: #90cdf4; margin-top: 1px; }
+.cta-btn { display: inline-block; margin-top: 14px; padding: 9px 20px; background: #4299e1; color: white; border-radius: 7px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; border: none; transition: background 0.15s; }
+.cta-btn:hover { background: #3182ce; }
+
+/* ── Info panels ── */
+.info-panel{background:linear-gradient(135deg,#fffbeb,#fefce8);border:1px solid #f6e05e;border-radius:10px;margin-bottom:20px;overflow:hidden;}
+.info-header{padding:11px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:13px;color:#744210;user-select:none;gap:8px;}
+.info-header:hover{background:rgba(246,224,94,0.2);}
+.info-caret{font-size:11px;transition:transform 0.25s;color:#a16207;flex-shrink:0;}
+.info-caret.closed{transform:rotate(-90deg);}
+.info-body{padding:12px 18px 16px;font-size:13px;color:#4a5568;line-height:1.7;border-top:1px solid #fef08a;}
+.info-body.hidden{display:none;}
+.info-body p{margin-bottom:8px;}.info-body p:last-child{margin-bottom:0;}
+.info-tip{background:#fef3c7;border-left:3px solid #d97706;padding:8px 12px;border-radius:0 6px 6px 0;margin-top:10px;font-size:12px;color:#78350f;line-height:1.5;}
+/* ── Chart sections ── */
+.chart-section{background:white;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:20px;overflow:hidden;}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:#718096;align-items:center;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;}
+.legend-swatch{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="app-title">Flip Deal Calculator</div>
+    </div>
+    <div>
+      <div class="address-display" id="h_address">123 Main Street</div>
+      <div class="address-sub" id="h_sub">2/1 no garage &bull; 797 SF</div>
+    </div>
+    <div id="h_badge" class="status-badge badge-loss">—</div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost btn-sm" onclick="newDeal()">New Deal</button>
+    <button class="btn btn-primary btn-sm" onclick="saveDeal()" id="save-btn">Save Deal</button>
+  </div>
+</div>
+
+<!-- ══ TABS ══ -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('inputs', this)">Inputs</div>
+  <div class="tab" onclick="switchTab('comps', this)">Comps</div>
+  <div class="tab" onclick="switchTab('rehab', this)">Rehab Budget</div>
+  <div class="tab" onclick="switchTab('summary', this)">Deal Summary</div>
+  <div class="tab" onclick="switchTab('sensitivity', this)">Sensitivity</div>
+</div>
+
+<!-- ══════════ INPUTS ══════════ -->
+<div class="panel active" id="panel-inputs">
+
+  <div class="cta-box">
+    <div class="cta-left">
+      <div class="cta-logo">Beachport Asset Group, LLC</div>
+      <div class="cta-title">Want to wholesale or JV this deal?</div>
+      <div class="cta-body">If the numbers work but you need a buyer or a capital partner, Beachport Asset Group acquires deals and structures joint ventures with investors across Florida. Reach out — we move fast.</div>
+    </div>
+    <div class="cta-right">
+      <div class="cta-contact-item">
+        <div class="cta-icon">📞</div>
+        <div>
+          <div class="cta-contact-text">321-209-4736</div>
+          <div class="cta-contact-sub">Call or text anytime</div>
+        </div>
+      </div>
+      <div class="cta-contact-item">
+        <div class="cta-icon">✉️</div>
+        <div>
+          <div class="cta-contact-text">beachportassetgroup@gmail.com</div>
+          <div class="cta-contact-sub">Email us your deal</div>
+        </div>
+      </div>
+      <button class="cta-btn" onclick="window.location.href='mailto:beachportassetgroup@gmail.com?subject=Deal%20Inquiry'">Send Us This Deal →</button>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-header" onclick="toggleInfo(this)">
+      <span>💡 How to use the Inputs tab</span>
+      <span class="info-caret">▾</span>
+    </div>
+    <div class="info-body">
+      <p><strong>Start here.</strong> Fill in the property basics before moving to Comps or Rehab. Every calculation in this tool flows from these numbers.</p>
+      <p><strong>Property &amp; SF:</strong> Square footage is critical — it drives every $/SF rehab calculation. Use heated living area only, not total lot or garage.</p>
+      <p><strong>Closing &amp; Selling Costs:</strong> Buyer fees cover your title/escrow at purchase (~$1,500–$2,500 in Florida). Seller fees are title costs when you sell. Realtor % is only the listing side commission — you're the seller. The tax rate defaults to ~1.5% annual; the calculator applies it for half a year.</p>
+      <p><strong>ARV Scenarios:</strong> These multiply your average comp $/SF to produce best, likely, and worst sale prices. 100% = comp average. Using 90% for "likely" builds in a conservative buffer — your flip probably won't sell at the exact top of comps.</p>
+      <p><strong>Max Offer Calculator:</strong> Set your target profit first, then choose which ARV scenario to back into. The Deal Summary tab shows you the maximum purchase price that still hits your target.</p>
+      <div class="info-tip">⚡ After filling in property info, go to <strong>Comps</strong> to pull sold comparables, then <strong>Rehab Budget</strong> to build your cost estimate.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">Property</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group wide">
+          <label>Street Address</label>
+          <input type="text" id="i_address" value="123 Main Street" oninput="recalc()">
+        </div>
+        <div class="form-group wide">
+          <label>Description</label>
+          <input type="text" id="i_desc" value="2/1 no garage" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Subject SF</label>
+          <input type="number" id="i_sf" value="797" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Purchase Price ($)</label>
+          <input type="number" id="i_purchase" value="135000" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">Closing &amp; Selling Costs</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Buyer Closing Fees ($)</label>
+          <input type="number" id="i_buyerFees" value="1500" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Seller Closing Fees ($)</label>
+          <input type="number" id="i_sellerFees" value="2500" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Realtor Commission (%)</label>
+          <input type="number" id="i_realtorPct" value="3.5" step="0.1" oninput="recalc()">
+          <span class="input-hint">% of ARV</span>
+        </div>
+        <div class="form-group">
+          <label>Property Tax Rate (% annual)</label>
+          <input type="number" id="i_taxRate" value="1.5" step="0.1" oninput="recalc()">
+          <span class="input-hint">Applied based on holding period</span>
+        </div>
+        <div class="form-group">
+          <label>Holding Period (months)</label>
+          <input type="number" id="i_holdMonths" value="4" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">ARV Scenarios</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Best Case (% of avg comp $/SF)</label>
+          <input type="number" id="i_bestPct" value="100" step="5" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Likely Case (%)</label>
+          <input type="number" id="i_likelyPct" value="90" step="5" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Worst Case (%)</label>
+          <input type="number" id="i_worstPct" value="80" step="5" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">Max Offer Calculator</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Target Profit ($)</label>
+          <input type="number" id="i_targetProfit" value="50000" step="5000" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>ARV to Use</label>
+          <select id="i_maxOfferArv" onchange="recalc()" style="padding:8px 10px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:14px; background:#ebf8ff;">
+            <option value="best">Best Case</option>
+            <option value="likely" selected>Likely Case</option>
+            <option value="worst">Worst Case</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">Financing</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Include Financing Costs?</label>
+          <select id="i_useFinancing" onchange="toggleFinancingFields(); recalc()" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:14px;background:#ebf8ff;">
+            <option value="no">No — all cash deal</option>
+            <option value="yes">Yes — include loan costs</option>
+          </select>
+          <span class="input-hint">Interest + points added to total cash in</span>
+        </div>
+      </div>
+      <div id="financing-fields" style="display:none; margin-top:14px;">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Loan Amount ($)</label>
+            <input type="number" id="i_loanAmount" value="100000" oninput="recalc()">
+          </div>
+          <div class="form-group">
+            <label>Interest Rate (% annual)</label>
+            <input type="number" id="i_loanRate" value="10" step="0.25" oninput="recalc()">
+            <span class="input-hint">Applied over holding period</span>
+          </div>
+          <div class="form-group">
+            <label>Loan Closing Costs / Points ($)</label>
+            <input type="number" id="i_loanCosts" value="2000" oninput="recalc()">
+            <span class="input-hint">Origination fees, points, etc.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ COMPS ══════════ -->
+<div class="panel" id="panel-comps">
+
+  <div class="info-panel">
+    <div class="info-header" onclick="toggleInfo(this)">
+      <span>💡 How to use the Comps tab</span>
+      <span class="info-caret">▾</span>
+    </div>
+    <div class="info-body">
+      <p><strong>Pull recently sold properties</strong> (ideally within 6 months) within ~0.5 miles of your subject property. Match on bed count, similar square footage, and similar condition. Zillow, Redfin, or the MLS are your best sources.</p>
+      <p><strong>$/SF (price per square foot)</strong> normalizes for size differences between comps. The calculator averages all comp $/SF values and multiplies by your subject SF to estimate ARV. A tight $/SF range means your ARV estimate is solid — a wide spread signals more risk.</p>
+      <p><strong>What to watch for:</strong> Flag anything unusual in Notes — garage vs. no garage, pool, metal roof, fully remodeled vs. dated. A comp with a pool or 2-car garage can inflate your average $/SF if your subject has neither. Consider excluding extreme outliers using the Y/N toggle.</p>
+      <p><strong>How many comps:</strong> Aim for 5–8. Fewer than 3 and your average is unreliable. More than 10 may include sales that are too far or too old to be relevant.</p>
+      <div class="info-tip">🎯 The chart below shows your comp $/SF values sorted low-to-high with the average marked. Check whether your subject property would realistically sit above or below the average given its condition.</div>
+    </div>
+  </div>
+
+  <div class="card-row">
+    <div class="card"><div class="card-label">Avg $/SF</div><div class="card-value" id="c_avgPSF">—</div></div>
+    <div class="card"><div class="card-label">Median $/SF</div><div class="card-value" id="c_medPSF">—</div></div>
+    <div class="card"><div class="card-label">Comp Count</div><div class="card-value" id="c_count">—</div></div>
+    <div class="card"><div class="card-label">ARV (Best)</div><div class="card-value pos" id="c_arv">—</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      Sold Comparables
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <label style="font-size:11px;color:#a0aec0;font-weight:600;">Filter:</label>
+        <select id="comp-condition-filter" onchange="filterCompsByCondition()" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;background:white;color:#2d3748;">
+          <option value="all">All conditions</option>
+          <option value="dilapidated">Dilapidated</option>
+          <option value="worn">Worn / dated</option>
+          <option value="grandma">Grandma house</option>
+          <option value="well-kept">Well kept</option>
+          <option value="renovated">Renovated</option>
+        </select>
+        <button class="btn btn-sm" onclick="checkAllComps(true)" style="background:#e2e8f0;color:#4a5568;padding:4px 8px;">✓ All</button>
+        <button class="btn btn-sm" onclick="checkAllComps(false)" style="background:#e2e8f0;color:#4a5568;padding:4px 8px;">✗ None</button>
+        <button class="btn btn-add btn-sm" onclick="addComp()">+ Add Comp</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center;">✓</th>
+            <th style="min-width:160px;">Address</th>
+            <th class="r" style="min-width:110px;">Sale Price ($)</th>
+            <th class="r" style="min-width:80px;">SF</th>
+            <th class="r" style="min-width:80px;">$/SF</th>
+            <th style="min-width:200px;">Notes</th>
+            <th style="min-width:130px;">Condition</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="comps-body"></tbody>
+        <tbody id="comps-stats-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="section-header">$/SF Distribution</div>
+    <div class="section-body">
+      <div id="comp-chart-svg"></div>
+      <div class="chart-legend" style="margin-top:8px;">
+        <div class="chart-legend-item"><span class="legend-swatch" style="background:#48bb78;"></span>Above average</div>
+        <div class="chart-legend-item"><span class="legend-swatch" style="background:#fc8181;"></span>Below average</div>
+        <div class="chart-legend-item"><span style="display:inline-block;width:18px;height:2px;border-top:2px dashed #4299e1;vertical-align:middle;"></span>&nbsp;Average $/SF</div>
+        <div class="chart-legend-item"><span style="display:inline-block;width:18px;height:2px;border-top:2px dotted #9f7aea;vertical-align:middle;"></span>&nbsp;Median $/SF</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ REHAB BUDGET ══════════ -->
+<div class="panel" id="panel-rehab">
+
+  <div class="info-panel">
+    <div class="info-header" onclick="toggleInfo(this)">
+      <span>💡 How to use the Rehab Budget tab</span>
+      <span class="info-caret">▾</span>
+    </div>
+    <div class="info-body">
+      <p><strong>Enter your estimated cost for each line item.</strong> Pre-populated values are reasonable defaults for a typical Florida flip — adjust them to match your actual contractor bids or experience.</p>
+      <p><strong>$/SF mode:</strong> Cost scales with house size (rate × subject SF = estimated cost). Use this for items like roof, flooring, paint — where bigger houses genuinely cost more.</p>
+      <p><strong>Lump Sum mode:</strong> Fixed cost regardless of square footage. Use for mechanical systems (AC, septic, water heater), appliances, and trade-specific items where the quote is a flat number.</p>
+      <p><strong>In/Out toggle (Y/N):</strong> Quickly include or exclude items to model different rehab scopes. "What if I skip the pool?" — toggle it out and watch the numbers update instantly.</p>
+      <p><strong>Contingency:</strong> Always add 10–15% on top of your line-item subtotal. Unexpected costs (hidden rot, permit delays, price increases) are the rule, not the exception. 10% is the absolute minimum — use 15% if the house is older or the inspection revealed surprises.</p>
+      <div class="info-tip">📊 The donut chart shows where your rehab dollars are going. Large slices that you can control (like roof or floors) are your primary levers for adjusting the budget.</div>
+    </div>
+  </div>
+
+  <div class="card-row">
+    <div class="card"><div class="card-label">Subtotal</div><div class="card-value" id="r_subtotal">—</div></div>
+    <div class="card"><div class="card-label">Contingency</div><div class="card-value" id="r_contingency">—</div></div>
+    <div class="card" style="border-left:4px solid #4299e1;"><div class="card-label">Total Rehab</div><div class="card-value" style="color:#2b6cb0;" id="r_total">—</div></div>
+    <div class="card"><div class="card-label">$/SF</div><div class="card-value" id="r_psf">—</div></div>
+  </div>
+
+  <div class="section" style="margin-bottom:16px;">
+    <div class="section-header">Settings</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Contingency (%)</label>
+          <input type="number" id="i_contingency" value="10" step="1" oninput="recalc()">
+          <span class="input-hint">Added on top of item subtotal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="section">
+        <div class="section-header">
+          Line Items
+          <button class="btn btn-add btn-sm" onclick="addRehabItem()">+ Add Item</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:160px;">Line Item</th>
+                <th style="min-width:110px;text-align:center;">Mode</th>
+                <th class="r" style="min-width:100px;">Rate / Amount</th>
+                <th class="r" style="min-width:90px;">Est. Cost</th>
+                <th style="text-align:center;min-width:60px;">In</th>
+                <th class="r" style="min-width:90px;">Budgeted</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody id="rehab-items-body"></tbody>
+            <tbody id="rehab-totals-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section" style="margin-bottom:16px;">
+        <div class="section-header">Budget Breakdown</div>
+        <div class="section-body">
+          <div id="rehab-donut-svg" style="margin-bottom:8px;"></div>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><span class="legend-swatch" style="background:#4299e1;"></span>Lump sum</div>
+            <div class="chart-legend-item"><span class="legend-swatch" style="background:#9f7aea;"></span>$/SF item</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header">Cost by Item (sorted)</div>
+        <div class="section-body">
+          <div class="bar-chart" id="rehab-chart"></div>
+          <div style="margin-top:10px;display:flex;gap:14px;font-size:11px;color:#718096;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#4299e1;display:inline-block;"></span>Lump sum</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#9f7aea;display:inline-block;"></span>$/SF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ DEAL SUMMARY ══════════ -->
+<div class="panel" id="panel-summary">
+
+  <div class="info-panel">
+    <div class="info-header" onclick="toggleInfo(this)">
+      <span>💡 How to read the Deal Summary</span>
+      <span class="info-caret">▾</span>
+    </div>
+    <div class="info-body">
+      <p><strong>This tab pulls everything together.</strong> The numbers here update live as you change inputs, comps, or rehab items on any other tab.</p>
+      <p><strong>Scenarios (Best / Likely / Worst):</strong> Best uses 100% of comp average $/SF; Likely and Worst apply the discounts you set on the Inputs tab. Always verify the deal works in at least the Likely scenario — don't rely on Best Case alone.</p>
+      <p><strong>ROI gauge:</strong> Shows your return on total cash invested (profit ÷ total cash in). Experienced flippers typically target 15–25%+. Below 10% and the deal may not justify the time, risk, and capital.</p>
+      <p><strong>Profit Waterfall:</strong> Shows how ARV gets divided — what goes to purchase, rehab, fees, realtor, and what's left for you. A healthy deal has a meaningful green slice at the right end.</p>
+      <p><strong>Max Offer Calculator:</strong> Works backward from your target profit. If the seller's current ask is above the max offer, you need to either negotiate down, reduce rehab scope, or accept a lower return.</p>
+      <div class="info-tip">🔑 The <strong>Deal Economics</strong> waterfall on the left shows every cost line. The Sensitivity tab lets you stress-test how the deal holds up if ARV or purchase price move in either direction.</div>
+    </div>
+  </div>
+
+  <div class="card-row">
+    <div class="card"><div class="card-label">Purchase Price</div><div class="card-value" id="s_purchase">—</div></div>
+    <div class="card"><div class="card-label">Total Rehab</div><div class="card-value" id="s_rehab">—</div></div>
+    <div class="card"><div class="card-label">Total Cash In</div><div class="card-value" id="s_cashIn">—</div></div>
+    <div class="card"><div class="card-label">Best Case ARV</div><div class="card-value pos" id="s_arv">—</div></div>
+    <div class="card" style="border-left:4px solid #e53e3e;" id="s_profitCard"><div class="card-label">Profit (Best)</div><div class="card-value neg" id="s_profit">—</div></div>
+    <div class="card" style="border-left:4px solid #e53e3e;" id="s_roiCard"><div class="card-label">ROI (Best)</div><div class="card-value neg" id="s_roi">—</div></div>
+  </div>
+
+  <div class="scenario-grid">
+    <div class="scenario-card best">
+      <div class="scenario-label">Best Case</div>
+      <div class="scenario-arv" id="sc_bestArv">ARV: —</div>
+      <div class="scenario-profit" id="sc_bestProfit">—</div>
+      <div class="scenario-roi" id="sc_bestRoi">— ROI</div>
+    </div>
+    <div class="scenario-card likely">
+      <div class="scenario-label">Likely Case</div>
+      <div class="scenario-arv" id="sc_likelyArv">ARV: —</div>
+      <div class="scenario-profit" id="sc_likelyProfit">—</div>
+      <div class="scenario-roi" id="sc_likelyRoi">— ROI</div>
+    </div>
+    <div class="scenario-card worst">
+      <div class="scenario-label">Worst Case</div>
+      <div class="scenario-arv" id="sc_worstArv">ARV: —</div>
+      <div class="scenario-profit" id="sc_worstProfit">—</div>
+      <div class="scenario-roi" id="sc_worstRoi">— ROI</div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:20px;">
+    <div class="chart-section" style="margin-bottom:0;">
+      <div class="section-header">ARV Breakdown — Where the Money Goes</div>
+      <div class="section-body">
+        <div id="profit-wf-svg"></div>
+        <div class="chart-legend" style="margin-top:8px;">
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#fc8181;"></span>Purchase</div>
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#f6ad55;"></span>Rehab</div>
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#fbd38d;"></span>Fees &amp; Tax</div>
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#fef08a;"></span>Realtor</div>
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#e9d8fd;"></span>Financing</div>
+          <div class="chart-legend-item"><span class="legend-swatch" style="background:#9ae6b4;"></span>Profit</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-section" style="margin-bottom:0;">
+      <div class="section-header">ROI Gauge (Best Case)</div>
+      <div class="section-body" style="display:flex;flex-direction:column;align-items:center;">
+        <div id="roi-gauge-svg" style="width:100%;max-width:260px;"></div>
+        <div style="display:flex;gap:14px;font-size:11px;margin-top:4px;flex-wrap:wrap;justify-content:center;">
+          <span style="color:#c53030;">■ Negative</span>
+          <span style="color:#92400e;">■ 0–15%</span>
+          <span style="color:#276749;">■ 15%+</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <div class="section-header">Deal Economics (Best Case)</div>
+      <div class="section-body">
+        <div class="wf-row wf-section"><span>Acquisition</span></div>
+        <div class="wf-row"><span class="wf-indent">Purchase price</span><span class="wf-val" id="wf_purchase">—</span></div>
+        <div class="wf-row"><span class="wf-indent">Buyer closing fees</span><span class="wf-val" id="wf_buyerFees">—</span></div>
+        <div class="wf-row"><span class="wf-indent" id="wf_taxes_label">Property taxes</span><span class="wf-val" id="wf_taxes">—</span></div>
+        <div class="wf-row" style="font-weight:700;"><span>Total Acquisition</span><span class="wf-val" id="wf_totalAcq">—</span></div>
+        <div class="wf-row wf-section" style="margin-top:4px;"><span>Rehab</span></div>
+        <div class="wf-row"><span class="wf-indent">Rehab subtotal</span><span class="wf-val" id="wf_rehabSub">—</span></div>
+        <div class="wf-row"><span class="wf-indent">Contingency</span><span class="wf-val" id="wf_contingency">—</span></div>
+        <div class="wf-row" style="font-weight:700;"><span>Total Rehab</span><span class="wf-val" id="wf_rehabTotal">—</span></div>
+        <div class="wf-row wf-section" id="wf_fin_hdr" style="margin-top:4px;display:none;"><span>Financing</span></div>
+        <div class="wf-row" id="wf_fin_int_row" style="display:none;"><span class="wf-indent">Loan interest</span><span class="wf-val" id="wf_finInterest">—</span></div>
+        <div class="wf-row" id="wf_fin_pts_row" style="display:none;"><span class="wf-indent">Closing costs / points</span><span class="wf-val" id="wf_finCosts">—</span></div>
+        <div class="wf-row" id="wf_fin_tot_row" style="display:none;font-weight:700;"><span>Total Financing</span><span class="wf-val" id="wf_finTotal">—</span></div>
+        <div class="wf-row wf-section" style="margin-top:4px;"><span>Sale (Best Case)</span></div>
+        <div class="wf-row"><span class="wf-indent">ARV</span><span class="wf-val" id="wf_arv">—</span></div>
+        <div class="wf-row"><span class="wf-indent">Realtor commission</span><span class="wf-val" id="wf_realtor">—</span></div>
+        <div class="wf-row"><span class="wf-indent">Seller closing fees</span><span class="wf-val" id="wf_sellerFees">—</span></div>
+        <div class="wf-row" style="font-weight:700;"><span>Net Sale Proceeds</span><span class="wf-val" id="wf_netProceeds">—</span></div>
+        <div class="wf-total"><span>Profit</span><span class="wf-val neg" id="wf_profit">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section" style="margin-bottom:20px;">
+        <div class="section-header">Max Offer Calculator</div>
+        <div class="section-body">
+          <div class="max-offer">
+            <div style="font-size:12px; color:#2c5282; font-weight:600; margin-bottom:6px;" id="mo_label">—</div>
+            <div class="max-offer-amount" id="mo_amount">—</div>
+            <div class="max-offer-label">Maximum purchase price</div>
+            <div class="max-offer-detail" id="mo_detail">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ SENSITIVITY ══════════ -->
+<div class="panel" id="panel-sensitivity">
+
+  <div class="info-panel">
+    <div class="info-header" onclick="toggleInfo(this)">
+      <span>💡 How to read the Sensitivity table</span>
+      <span class="info-caret">▾</span>
+    </div>
+    <div class="info-body">
+      <p><strong>The sensitivity table stress-tests your deal</strong> by varying two key unknowns simultaneously: what you pay (purchase price, rows) and what you sell for (ARV, columns). The center cell with the yellow outline is your current scenario.</p>
+      <p><strong>How to use it:</strong> Scan the row for your expected purchase price — how many cells are green? If your ARV estimate is off by $10k or $20k, does the deal still work? If nearly everything in your row is red, the deal is fragile and depends too heavily on hitting the top of the market.</p>
+      <p><strong>Color guide (profit):</strong> 8 bands from very dark green ($70k+) through light green ($0–$25k), light red ($0–$25k loss), up to very dark red ($70k+ loss). The finer the gradation, the easier it is to see where the deal starts to go sideways.</p>
+      <p><strong>Adjusting the grid:</strong> Change the step sizes to zoom in or out. Smaller steps reveal more detail around your current scenario; larger steps show the full range of possible outcomes.</p>
+      <div class="info-tip">💡 A deal that's only green in 1–2 cells near the center is risky. A good deal has a wide green band — it works across a range of ARV and purchase prices.</div>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:20px;">
+    <div class="section-header">Grid Settings</div>
+    <div class="section-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>ARV Step ($)</label>
+          <input type="number" id="sen_arvStep" value="10000" step="1000" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Purchase Step ($)</label>
+          <input type="number" id="sen_purStep" value="10000" step="1000" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>ARV Steps (each side)</label>
+          <input type="number" id="sen_arvN" value="3" min="1" max="6" oninput="recalc()">
+        </div>
+        <div class="form-group">
+          <label>Purchase Steps (each side)</label>
+          <input type="number" id="sen_purN" value="3" min="1" max="6" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:12px; color:#718096; margin-bottom:12px;">Center = current purchase price &amp; best-case ARV. Yellow outline = current scenario.</p>
+
+  <div style="font-weight:700; font-size:14px; margin-bottom:10px;">Profit ($)</div>
+  <div class="color-key">
+    <div class="key-item"><div class="swatch" style="background:#145a32;"></div> $70k+ profit</div>
+    <div class="key-item"><div class="swatch" style="background:#1e8449;"></div> $50–70k</div>
+    <div class="key-item"><div class="swatch" style="background:#58d68d;"></div> $25–50k</div>
+    <div class="key-item"><div class="swatch" style="background:#d5f5e3;border:1px solid #9ae6b4;"></div> $0–25k profit</div>
+    <div class="key-item"><div class="swatch" style="background:#fde8e8;border:1px solid #feb2b2;"></div> $0–25k loss</div>
+    <div class="key-item"><div class="swatch" style="background:#f1948a;"></div> $25–50k loss</div>
+    <div class="key-item"><div class="swatch" style="background:#e74c3c;"></div> $50–70k loss</div>
+    <div class="key-item"><div class="swatch" style="background:#922b21;"></div> $70k+ loss</div>
+    <div class="key-item"><div class="swatch" style="background:#fef3c7;border:1px solid #d69e2e;"></div> Current</div>
+  </div>
+  <div class="sensitivity-wrap"><table class="sens-table" id="sens-profit-table"></table></div>
+
+  <div style="font-weight:700; font-size:14px; margin:20px 0 10px;">ROI (%)</div>
+  <div class="sensitivity-wrap"><table class="sens-table" id="sens-roi-table"></table></div>
+
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div class="site-footer">
+  <div class="footer-row">
+    <div class="footer-disclaimer">
+      <strong>Disclaimer:</strong> This tool is provided for informational and planning purposes only. Results are estimates based on user-entered data and may be materially inaccurate. All figures should be independently verified by a qualified real estate professional before making any investment decision. This tool does not constitute financial, legal, or investment advice and must not be relied upon as such. Use at your own risk.
+    </div>
+    <div class="footer-ip">
+      <strong>&copy; Beachport Asset Group, LLC. All rights reserved.</strong> This tool is the exclusive intellectual property of Beachport Asset Group, LLC. Unauthorized reproduction, redistribution, modification, resale, sublicensing, or commercial exploitation of this tool or its contents, in whole or in part, is strictly prohibited. Licensed for individual, non-commercial use only.
+    </div>
+  </div>
+</div>
+
+<!-- Deal data injected here when saving a deal file. Empty on the master template. -->
+<script id="deal-preload"></script>
+
+<script>
+// ═══════════════════════════════════════════
+// DEFAULT DATA
+// ═══════════════════════════════════════════
+
+const DEFAULT_COMPS = [
+  { address: '3426 1st Pl',  salePrice: 248000, sf: 864,  notes: '2/2 dated, mint condition, no garage or driveway', included: true, condition: 'well-kept' },
+  { address: '3466 3rd St',  salePrice: 276000, sf: 1303, notes: '2/2 dated, okay condition, no garage',             included: true, condition: 'grandma'   },
+  { address: '2275 4th Ln',  salePrice: 290000, sf: 981,  notes: '3/2 with minor updates, good condition, garage',   included: true, condition: 'well-kept' },
+  { address: '275 20th Ave', salePrice: 315000, sf: 1300, notes: '3/2 w garage, metal roof, sunroom, full flip',     included: true, condition: 'renovated' },
+  { address: '2390 6th St',  salePrice: 300000, sf: 1174, notes: '2/2 w garage, recent updates and roof, very clean',included: true, condition: 'well-kept' },
+  { address: '740 17th Ave', salePrice: 340000, sf: 1386, notes: '3/2 w garage, metal roof, full flip',              included: true, condition: 'renovated' },
+  { address: '1816 4th Pl',  salePrice: 285000, sf: 850,  notes: '2/2 no garage, full flip',                         included: true, condition: 'renovated' },
+];
+
+// mode:'psf' → cost = rate × SF;  mode:'lump' → cost = amount
+const DEFAULT_REHAB_ITEMS = [
+  { name: 'Roof',                mode: 'psf',  rate: 9.5,  amount: 0,     included: true },
+  { name: 'Floors & base',       mode: 'psf',  rate: 4.6,  amount: 0,     included: true },
+  { name: 'Paint, wash, misc',   mode: 'psf',  rate: 7.0,  amount: 0,     included: true },
+  { name: 'Windows',             mode: 'psf',  rate: 5.0,  amount: 0,     included: true },
+  { name: 'Counters',            mode: 'psf',  rate: 1.6,  amount: 0,     included: true },
+  { name: 'Cabinets',            mode: 'psf',  rate: 2.2,  amount: 0,     included: true },
+  { name: 'Lights / fans',       mode: 'psf',  rate: 0.5,  amount: 0,     included: true },
+  { name: 'Septic',              mode: 'lump', rate: 0,    amount: 12500, included: true },
+  { name: 'AC',                  mode: 'lump', rate: 0,    amount: 5000,  included: true },
+  { name: 'Plumbing',            mode: 'lump', rate: 0,    amount: 5000,  included: true },
+  { name: 'Pool',                mode: 'lump', rate: 0,    amount: 5000,  included: true },
+  { name: 'PM fee',              mode: 'lump', rate: 0,    amount: 3500,  included: true },
+  { name: 'Showers ($2k each)',  mode: 'lump', rate: 0,    amount: 4000,  included: true },
+  { name: 'Electric',            mode: 'lump', rate: 0,    amount: 2500,  included: true },
+  { name: 'Appliances + install',mode: 'lump', rate: 0,    amount: 2500,  included: true },
+  { name: 'Siding / soffit',     mode: 'lump', rate: 0,    amount: 1000,  included: true },
+  { name: 'Landscaping',         mode: 'lump', rate: 0,    amount: 1000,  included: true },
+  { name: 'Water heater',        mode: 'lump', rate: 0,    amount: 1000,  included: true },
+  { name: 'Toilets / vanities',  mode: 'lump', rate: 0,    amount: 900,   included: true },
+  { name: 'Junk / dumpster',     mode: 'lump', rate: 0,    amount: 700,   included: true },
+  { name: 'Insurance',           mode: 'lump', rate: 0,    amount: 1200,  included: true },
+  { name: 'Photos',              mode: 'lump', rate: 0,    amount: 400,   included: true },
+  { name: 'Other',               mode: 'lump', rate: 0,    amount: 0,     included: true },
+];
+
+let comps = JSON.parse(JSON.stringify(DEFAULT_COMPS));
+let rehabItems = JSON.parse(JSON.stringify(DEFAULT_REHAB_ITEMS));
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+
+const num = id => parseFloat(document.getElementById(id)?.value) || 0;
+const fmt = v => {
+  const a = Math.abs(v), s = '$' + Math.round(a).toLocaleString();
+  return v < 0 ? '(' + s + ')' : s;
+};
+const fmtPct = v => {
+  const a = (Math.abs(v) * 100).toFixed(1) + '%';
+  return v < 0 ? '(' + a + ')' : a;
+};
+const fmtPSF = v => '$' + v.toFixed(2);
+const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+const setClass = (id, cls) => { const el = document.getElementById(id); if (el) { el.className = el.className.replace(/\b(pos|neg)\b/g, ''); if (cls) el.classList.add(cls); } };
+
+// ═══════════════════════════════════════════
+// CORE CALCULATIONS
+// ═══════════════════════════════════════════
+
+function getAvgPSF() {
+  const valid = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  if (!valid.length) return 0;
+  const sum = valid.reduce((a, c) => a + c.salePrice / c.sf, 0);
+  return sum / valid.length;
+}
+
+function getMedianPSF() {
+  const valid = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  if (!valid.length) return 0;
+  const vals = valid.map(c => c.salePrice / c.sf).sort((a, b) => a - b);
+  const m = Math.floor(vals.length / 2);
+  return vals.length % 2 !== 0 ? vals[m] : (vals[m - 1] + vals[m]) / 2;
+}
+
+function itemCost(item, sf) {
+  if (!item.included) return 0;
+  return item.mode === 'psf' ? item.rate * sf : item.amount;
+}
+
+function getRehabSubtotal(sf) {
+  return rehabItems.reduce((sum, item) => sum + itemCost(item, sf), 0);
+}
+
+function calcDeal(purchaseOverride, arvOverride) {
+  const sf = num('i_sf');
+  const purchase = purchaseOverride ?? num('i_purchase');
+  const buyerFees = num('i_buyerFees');
+  const sellerFees = num('i_sellerFees');
+  const realtorPct = num('i_realtorPct') / 100;
+  const taxRate = num('i_taxRate') / 100;
+  const holdMonths = num('i_holdMonths') || 1;
+  const contingencyPct = num('i_contingency') / 100;
+
+  const avgPSF = getAvgPSF();
+  const bestPct = num('i_bestPct') / 100;
+  const likelyPct = num('i_likelyPct') / 100;
+  const worstPct = num('i_worstPct') / 100;
+
+  const arvBest = avgPSF * sf * bestPct;
+  const arvLikely = avgPSF * sf * likelyPct;
+  const arvWorst = avgPSF * sf * worstPct;
+
+  const arv = arvOverride ?? arvBest;
+
+  const propTaxes = purchase * taxRate * (holdMonths / 12);
+  const totalAcq = purchase + buyerFees + propTaxes;
+  const rehabSub = getRehabSubtotal(sf);
+  const rehabTotal = rehabSub * (1 + contingencyPct);
+  const contingencyAmt = rehabSub * contingencyPct;
+
+  // Financing
+  const useFinancing = document.getElementById('i_useFinancing')?.value === 'yes';
+  let finInterest = 0, finClosingCosts = 0, financingCost = 0;
+  if (useFinancing) {
+    const loanAmount = num('i_loanAmount');
+    const loanRate = num('i_loanRate') / 100;
+    finClosingCosts = num('i_loanCosts');
+    finInterest = loanAmount * loanRate * (holdMonths / 12);
+    financingCost = finInterest + finClosingCosts;
+  }
+
+  const totalCashIn = totalAcq + rehabTotal + financingCost;
+  const netProceeds = arv * (1 - realtorPct) - sellerFees;
+  const profit = netProceeds - totalCashIn;
+  const roi = totalCashIn > 0 ? profit / totalCashIn : 0;
+
+  return {
+    sf, purchase, buyerFees, sellerFees, realtorPct, taxRate, holdMonths, contingencyPct,
+    avgPSF, bestPct, likelyPct, worstPct, arvBest, arvLikely, arvWorst,
+    arv, propTaxes, totalAcq, rehabSub, rehabTotal, contingencyAmt,
+    useFinancing, finInterest, finClosingCosts, financingCost,
+    totalCashIn, netProceeds, profit, roi,
+    realtorAmt: arv * realtorPct,
+  };
+}
+
+// ═══════════════════════════════════════════
+// COMPS — split into input rows + stats rows
+// ═══════════════════════════════════════════
+
+const COMP_CONDITIONS = [
+  { value: 'dilapidated', label: 'Dilapidated' },
+  { value: 'worn',        label: 'Worn / dated' },
+  { value: 'grandma',     label: 'Grandma house' },
+  { value: 'well-kept',   label: 'Well kept' },
+  { value: 'renovated',   label: 'Renovated' },
+];
+
+// Full rebuild of input rows only — call on structural changes (add/remove)
+function renderComps() {
+  const tbody = document.getElementById('comps-body');
+  tbody.innerHTML = '';
+  comps.forEach((c, i) => {
+    // Ensure backward-compat defaults
+    if (c.included === undefined) c.included = true;
+    if (!c.condition) c.condition = 'well-kept';
+
+    const psf = c.salePrice > 0 && c.sf > 0 ? fmtPSF(c.salePrice / c.sf) : '—';
+    const condOptions = COMP_CONDITIONS.map(o =>
+      `<option value="${o.value}"${c.condition === o.value ? ' selected' : ''}>${o.label}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.style.opacity = c.included ? '1' : '0.45';
+    tr.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" id="comp-include-${i}" ${c.included ? 'checked' : ''} onchange="toggleCompIncluded(${i},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#4299e1;"></td>
+      <td><input type="text"   id="comp-addr-${i}"  value="${c.address}"        oninput="updateCompField(${i},'address',this.value)"></td>
+      <td><input type="number" id="comp-price-${i}" value="${c.salePrice || ''}" oninput="updateCompField(${i},'salePrice',+this.value)"></td>
+      <td><input type="number" id="comp-sf-${i}"    value="${c.sf || ''}"        oninput="updateCompField(${i},'sf',+this.value)"></td>
+      <td class="r psf-val" id="comp-psf-${i}">${psf}</td>
+      <td><input type="text"   id="comp-notes-${i}" value="${c.notes}"           oninput="comps[${i}].notes=this.value;autosave()"></td>
+      <td><select id="comp-cond-${i}" onchange="updateCompCondition(${i},this.value)"
+            style="padding:4px 6px;border:1.5px solid #e2e8f0;border-radius:5px;font-size:12px;background:#ebf8ff;width:100%;">
+          ${condOptions}
+        </select></td>
+      <td><button class="btn btn-remove btn-sm" onclick="removeComp(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateCompStats();
+}
+
+// Called when user types in a comp field — updates just $/SF + stats, no DOM rebuild
+function updateCompField(i, field, value) {
+  comps[i][field] = value;
+  const c = comps[i];
+  const psfEl = document.getElementById(`comp-psf-${i}`);
+  if (psfEl) psfEl.textContent = (c.salePrice > 0 && c.sf > 0) ? fmtPSF(c.salePrice / c.sf) : '—';
+  updateCompStats();
+  updateOutputs();
+  autosave();
+}
+
+function toggleCompIncluded(i, checked) {
+  comps[i].included = checked;
+  const row = document.getElementById(`comp-include-${i}`)?.closest('tr');
+  if (row) row.style.opacity = checked ? '1' : '0.45';
+  updateCompStats();
+  updateOutputs();
+  autosave();
+}
+
+function updateCompCondition(i, condition) {
+  comps[i].condition = condition;
+  autosave();
+}
+
+function filterCompsByCondition() {
+  const filter = document.getElementById('comp-condition-filter').value;
+  comps.forEach((c, i) => {
+    if (filter !== 'all') {
+      c.included = (c.condition === filter);
+      const cb = document.getElementById(`comp-include-${i}`);
+      if (cb) cb.checked = c.included;
+      const row = cb?.closest('tr');
+      if (row) row.style.opacity = c.included ? '1' : '0.45';
+    }
+  });
+  updateCompStats();
+  updateOutputs();
+  autosave();
+}
+
+function checkAllComps(checked) {
+  document.getElementById('comp-condition-filter').value = 'all';
+  comps.forEach((c, i) => {
+    c.included = checked;
+    const cb = document.getElementById(`comp-include-${i}`);
+    if (cb) cb.checked = checked;
+    const row = cb?.closest('tr');
+    if (row) row.style.opacity = checked ? '1' : '0.45';
+  });
+  updateCompStats();
+  updateOutputs();
+  autosave();
+}
+
+
+// Rebuilds only the stats/ARV footer rows + comp chart (no inputs touched)
+function updateCompStats() {
+  drawCompChart('comp-chart-svg');
+  const tbody = document.getElementById('comps-stats-body');
+  tbody.innerHTML = '';
+  const valid = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  if (!valid.length) return;
+
+  const avgPSF = getAvgPSF(), medPSF = getMedianPSF();
+  const allPSF = valid.map(c => c.salePrice / c.sf);
+  const minPSF = Math.min(...allPSF), maxPSF = Math.max(...allPSF);
+  const avgPrice = valid.reduce((s, c) => s + c.salePrice, 0) / valid.length;
+  const avgSF = valid.reduce((s, c) => s + c.sf, 0) / valid.length;
+  const sf = num('i_sf');
+  const arv = avgPSF * sf * num('i_bestPct') / 100;
+  const excluded = comps.filter(c => c.included === false).length;
+  const excludedNote = excluded > 0 ? ` (${excluded} excluded)` : '';
+
+  [
+    ['Average' + excludedNote, fmt(avgPrice), Math.round(avgSF).toLocaleString(), fmtPSF(avgPSF), 'avg-row'],
+    ['Median', '', '', fmtPSF(medPSF), 'stat-row'],
+    ['Min', '', '', fmtPSF(minPSF), 'stat-row'],
+    ['Max', '', '', fmtPSF(maxPSF), 'stat-row'],
+  ].forEach(([label, price, sfv, psf, cls]) => {
+    const tr = document.createElement('tr');
+    tr.className = cls;
+    tr.innerHTML = `<td></td><td>${label}</td><td class="r">${price}</td><td class="r">${sfv}</td><td class="r">${psf}</td><td colspan="3"></td>`;
+    tbody.appendChild(tr);
+  });
+
+  const arvTr = document.createElement('tr');
+  arvTr.className = 'arv-row';
+  arvTr.innerHTML = `<td colspan="8" style="padding:10px 12px;">
+    <strong>Subject ARV (Best)</strong> — avg $/SF (${fmtPSF(avgPSF)}) × ${sf} SF × ${num('i_bestPct')}% = <strong>${fmt(arv)}</strong>
+  </td>`;
+  tbody.appendChild(arvTr);
+}
+
+function addComp() {
+  comps.push({ address: '', salePrice: 0, sf: 0, notes: '', included: true, condition: 'well-kept' });
+  renderComps(); updateOutputs();
+}
+function removeComp(i) {
+  comps.splice(i, 1); renderComps(); updateOutputs();
+}
+
+// ═══════════════════════════════════════════
+// REHAB — unified items list
+// ═══════════════════════════════════════════
+
+function modeSegment(i, mode) {
+  const psfActive = mode === 'psf';
+  const base = 'padding:4px 9px;font-size:11px;font-weight:700;border:none;cursor:pointer;';
+  return `<div style="display:inline-flex;border:1.5px solid #e2e8f0;border-radius:6px;overflow:hidden;">
+    <button style="${base}background:${psfActive ? '#9f7aea' : '#f7fafc'};color:${psfActive ? 'white' : '#a0aec0'};" onclick="setRehabMode(${i},'psf')">$/SF</button>
+    <button style="${base}background:${!psfActive ? '#4299e1' : '#f7fafc'};color:${!psfActive ? 'white' : '#a0aec0'};border-left:1.5px solid #e2e8f0;" onclick="setRehabMode(${i},'lump')">Lump</button>
+  </div>`;
+}
+
+// Full rebuild of item input rows — call on structural changes or mode/include changes
+function renderRehabItems() {
+  const sf = num('i_sf');
+  const tbody = document.getElementById('rehab-items-body');
+  tbody.innerHTML = '';
+  rehabItems.forEach((item, i) => {
+    const cost = item.mode === 'psf' ? item.rate * sf : item.amount;
+    const valDisplay = item.mode === 'psf' ? item.rate : item.amount;
+    const hint = item.mode === 'psf' ? '<span style="font-size:11px;color:#9f7aea;margin-left:2px;">/SF</span>' : '';
+    const dimmed = !item.included;
+    const tr = document.createElement('tr');
+    tr.style.opacity = dimmed ? '0.45' : '1';
+    tr.innerHTML = `
+      <td><input type="text" id="ritem-name-${i}" value="${item.name}" oninput="rehabItems[${i}].name=this.value;autosave()"></td>
+      <td style="text-align:center;">${modeSegment(i, item.mode)}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <input type="number" id="ritem-val-${i}" value="${valDisplay || ''}"
+          oninput="updateRehabValue(${i},this)"
+          style="width:80px;text-align:right;">${hint}
+      </td>
+      <td class="r" id="ritem-cost-${i}" style="color:#4a5568;">${fmt(cost)}</td>
+      <td style="text-align:center;"><button class="${item.included ? 'toggle-yes' : 'toggle-no'}" onclick="toggleRehabItem(${i})">${item.included ? 'Y' : 'N'}</button></td>
+      <td class="r" id="ritem-budgeted-${i}">${item.included ? fmt(cost) : '—'}</td>
+      <td><button class="btn btn-remove btn-sm" onclick="removeRehabItem(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Called when user types in the rate/amount field — no DOM rebuild
+function updateRehabValue(i, inputEl) {
+  const val = parseFloat(inputEl.value) || 0;
+  const sf = num('i_sf');
+  if (rehabItems[i].mode === 'psf') rehabItems[i].rate = val;
+  else rehabItems[i].amount = val;
+  const cost = rehabItems[i].mode === 'psf' ? val * sf : val;
+  const costEl = document.getElementById(`ritem-cost-${i}`);
+  const budgetedEl = document.getElementById(`ritem-budgeted-${i}`);
+  if (costEl) costEl.textContent = fmt(cost);
+  if (budgetedEl) budgetedEl.textContent = rehabItems[i].included ? fmt(cost) : '—';
+  updateRehabTotals();
+  updateOutputs();
+  autosave();
+}
+
+function setRehabMode(i, mode) {
+  const sf = num('i_sf');
+  const item = rehabItems[i];
+  if (mode === 'lump' && item.mode === 'psf') {
+    item.amount = Math.round(item.rate * sf); // pre-fill with current calculated cost
+  } else if (mode === 'psf' && item.mode === 'lump') {
+    item.rate = sf > 0 ? parseFloat((item.amount / sf).toFixed(2)) : item.rate;
+  }
+  item.mode = mode;
+  renderRehabItems(); updateRehabTotals(); updateOutputs(); autosave();
+}
+
+function toggleRehabItem(i) {
+  rehabItems[i].included = !rehabItems[i].included;
+  renderRehabItems(); updateRehabTotals(); updateOutputs(); autosave();
+}
+
+function addRehabItem() {
+  rehabItems.push({ name: 'New Item', mode: 'lump', rate: 0, amount: 0, included: true });
+  renderRehabItems(); updateRehabTotals(); updateOutputs(); autosave();
+}
+
+function removeRehabItem(i) {
+  rehabItems.splice(i, 1); renderRehabItems(); updateRehabTotals(); updateOutputs(); autosave();
+}
+
+// Rebuilds only the totals rows + chart + header cards (no input rows touched)
+function updateRehabTotals() {
+  const sf = num('i_sf');
+  const contingencyPct = num('i_contingency') / 100;
+  const rehabSub = getRehabSubtotal(sf);
+  const contingencyAmt = rehabSub * contingencyPct;
+  const rehabTotal = rehabSub + contingencyAmt;
+
+  const tbody = document.getElementById('rehab-totals-body');
+  tbody.innerHTML = '';
+  const subTr = document.createElement('tr');
+  subTr.innerHTML = `<td colspan="5" style="font-weight:700;background:#f7fafc;">Subtotal</td><td class="r" style="font-weight:700;background:#f7fafc;">${fmt(rehabSub)}</td><td style="background:#f7fafc;"></td>`;
+  tbody.appendChild(subTr);
+  const contTr = document.createElement('tr');
+  contTr.innerHTML = `<td colspan="5" style="background:#f7fafc;color:#4a5568;">Contingency (${num('i_contingency')}%)</td><td class="r" style="background:#f7fafc;">${fmt(contingencyAmt)}</td><td style="background:#f7fafc;"></td>`;
+  tbody.appendChild(contTr);
+  const totalTr = document.createElement('tr');
+  totalTr.className = 'rehab-total-row';
+  totalTr.innerHTML = `<td colspan="5"><strong>TOTAL REHAB</strong></td><td class="r" style="color:#90cdf4;"><strong>${fmt(rehabTotal)}</strong></td><td></td>`;
+  tbody.appendChild(totalTr);
+
+  set('r_subtotal', fmt(rehabSub));
+  set('r_contingency', fmt(contingencyAmt));
+  set('r_total', fmt(rehabTotal));
+  set('r_psf', sf ? '$' + (rehabTotal / sf).toFixed(2) : '—');
+
+  // Donut chart
+  drawRehabDonut('rehab-donut-svg');
+
+  // Bar chart
+  const chartItems = rehabItems
+    .filter(item => item.included)
+    .map(item => ({ name: item.name, amount: item.mode === 'psf' ? item.rate * sf : item.amount, isSF: item.mode === 'psf' }))
+    .filter(x => x.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+  const maxAmt = chartItems.length ? chartItems[0].amount : 1;
+  document.getElementById('rehab-chart').innerHTML = chartItems.map(item => `
+    <div class="bar-row">
+      <div class="bar-name" title="${item.name}">${item.name}</div>
+      <div class="bar-track"><div class="bar-fill ${item.isSF ? 'bar-sf' : 'bar-lump'}" style="width:${(item.amount / maxAmt * 100).toFixed(1)}%"></div></div>
+      <div class="bar-amount">${fmt(item.amount)}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// BUILD SENSITIVITY TABLE
+// ═══════════════════════════════════════════
+
+function buildSensitivity() {
+  const arvStep = num('sen_arvStep') || 5000;
+  const purStep = num('sen_purStep') || 5000;
+  const arvN = Math.min(6, Math.max(1, Math.round(num('sen_arvN')))) || 3;
+  const purN = Math.min(6, Math.max(1, Math.round(num('sen_purN')))) || 3;
+
+  const d = calcDeal();
+  const centerArv = d.arvBest;
+  const centerPur = d.purchase;
+
+  const arvVals = [], purVals = [];
+  for (let i = -arvN; i <= arvN; i++) arvVals.push(centerArv + i * arvStep);
+  for (let i = -purN; i <= purN; i++) purVals.push(centerPur + i * purStep);
+
+  function profitColor(v) {
+    if (v >= 70000)  return ['#145a32', 'white'];   // 70k+ profit — very dark green
+    if (v >= 50000)  return ['#1e8449', 'white'];   // 50-70k
+    if (v >= 25000)  return ['#58d68d', '#0b3d1f']; // 25-50k
+    if (v > 0)       return ['#d5f5e3', '#1a5928']; // 0-25k — light green
+    if (v > -25000)  return ['#fde8e8', '#7b241c']; // 0 to -25k — light red
+    if (v > -50000)  return ['#f1948a', 'white'];   // -25 to -50k
+    if (v > -70000)  return ['#e74c3c', 'white'];   // -50 to -70k
+    return ['#922b21', 'white'];                     // 70k+ loss — very dark red
+  }
+  function roiColor(v) {
+    if (v >= 0.30)   return ['#145a32', 'white'];
+    if (v >= 0.20)   return ['#1e8449', 'white'];
+    if (v >= 0.10)   return ['#58d68d', '#0b3d1f'];
+    if (v > 0)       return ['#d5f5e3', '#1a5928'];
+    if (v > -0.10)   return ['#fde8e8', '#7b241c'];
+    if (v > -0.20)   return ['#f1948a', 'white'];
+    if (v > -0.30)   return ['#e74c3c', 'white'];
+    return ['#922b21', 'white'];
+  }
+
+  function buildTable(tableId, valFn, colorFn, fmtFn) {
+    const tbl = document.getElementById(tableId);
+    tbl.innerHTML = '';
+    const thead = document.createElement('thead');
+    const htr = document.createElement('tr');
+    const th0 = document.createElement('th');
+    th0.className = 'row-head';
+    th0.textContent = 'Purchase \\ ARV';
+    htr.appendChild(th0);
+    arvVals.forEach(arv => {
+      const th = document.createElement('th');
+      th.textContent = '$' + Math.round(arv / 1000) + 'k';
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    tbl.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    purVals.forEach(pur => {
+      const isCurPur = Math.abs(pur - centerPur) < purStep * 0.5;
+      const tr = document.createElement('tr');
+      if (isCurPur) tr.className = 'cur-row';
+      const th = document.createElement('td');
+      th.className = 'row-head';
+      th.textContent = '$' + Math.round(pur).toLocaleString();
+      tr.appendChild(th);
+      arvVals.forEach(arv => {
+        const isCurArv = Math.abs(arv - centerArv) < arvStep * 0.5;
+        const val = valFn(arv, pur);
+        const [bg, fg] = colorFn(val);
+        const td = document.createElement('td');
+        td.style.background = bg;
+        td.style.color = fg;
+        td.textContent = fmtFn(val);
+        if (isCurPur && isCurArv) td.className = 'center-cell';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+  }
+
+  function profitVal(arv, pur) { return calcDeal(pur, arv).profit; }
+  function roiVal(arv, pur) { return calcDeal(pur, arv).roi; }
+
+  buildTable('sens-profit-table', profitVal, profitColor, fmt);
+  buildTable('sens-roi-table', roiVal, roiColor, fmtPct);
+}
+
+// ═══════════════════════════════════════════
+// UPDATE OUTPUTS — updates all display-only elements
+// (safe to call without rebuilding any input rows)
+// ═══════════════════════════════════════════
+
+function updateOutputs() {
+  const d = calcDeal();
+  const avgPSF = getAvgPSF(), medPSF = getMedianPSF();
+
+  set('h_address', document.getElementById('i_address').value || 'New Deal');
+  set('h_sub', (document.getElementById('i_desc').value || '—') + ' • ' + (num('i_sf') || '—') + ' SF');
+
+  set('c_avgPSF', avgPSF ? fmtPSF(avgPSF) : '—');
+  set('c_medPSF', medPSF ? fmtPSF(medPSF) : '—');
+  const activeComps = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  set('c_count', activeComps.length + (comps.length > activeComps.length ? ` / ${comps.length}` : ''));
+  set('c_arv', d.arvBest ? fmt(d.arvBest) : '—');
+
+  set('s_purchase', fmt(d.purchase));
+  set('s_rehab', fmt(d.rehabTotal));
+  set('s_cashIn', fmt(d.totalCashIn));
+  set('s_arv', fmt(d.arvBest));
+  set('s_profit', fmt(d.profit));
+  set('s_roi', fmtPct(d.roi));
+  const profitEl = document.getElementById('s_profit');
+  const roiEl = document.getElementById('s_roi');
+  if (profitEl) profitEl.className = 'card-value ' + (d.profit >= 0 ? 'pos' : 'neg');
+  if (roiEl) roiEl.className = 'card-value ' + (d.roi >= 0 ? 'pos' : 'neg');
+
+  [['best', d.arvBest, d.bestPct], ['likely', d.arvLikely, d.likelyPct], ['worst', d.arvWorst, d.worstPct]]
+    .forEach(([key, arv, pct]) => {
+      const res = calcDeal(undefined, arv);
+      set(`sc_${key}Arv`, 'ARV: ' + fmt(arv) + ' (' + Math.round(pct * 100) + '%)');
+      set(`sc_${key}Profit`, fmt(res.profit));
+      set(`sc_${key}Roi`, fmtPct(res.roi) + ' ROI');
+    });
+
+  // Update tax label with holding period
+  const taxLabelEl = document.getElementById('wf_taxes_label');
+  if (taxLabelEl) taxLabelEl.textContent = `Property taxes (${d.holdMonths} mo)`;
+
+  set('wf_purchase', fmt(d.purchase));
+  set('wf_buyerFees', fmt(d.buyerFees));
+  set('wf_taxes', fmt(d.propTaxes));
+  set('wf_totalAcq', fmt(d.totalAcq));
+  set('wf_rehabSub', fmt(d.rehabSub));
+  set('wf_contingency', fmt(d.contingencyAmt));
+  set('wf_rehabTotal', fmt(d.rehabTotal));
+
+  // Financing rows
+  const finRowIds = ['wf_fin_hdr', 'wf_fin_int_row', 'wf_fin_pts_row', 'wf_fin_tot_row'];
+  finRowIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = d.useFinancing ? '' : 'none';
+  });
+  if (d.useFinancing) {
+    set('wf_finInterest', fmt(d.finInterest));
+    set('wf_finCosts', fmt(d.finClosingCosts));
+    set('wf_finTotal', fmt(d.financingCost));
+  }
+
+  set('wf_arv', fmt(d.arvBest));
+  set('wf_realtor', '(' + fmt(d.realtorAmt) + ')');
+  set('wf_sellerFees', '(' + fmt(d.sellerFees) + ')');
+  set('wf_netProceeds', fmt(d.netProceeds));
+  const wfProfit = document.getElementById('wf_profit');
+  if (wfProfit) { wfProfit.textContent = fmt(d.profit); wfProfit.className = 'wf-val ' + (d.profit >= 0 ? 'pos' : 'neg'); }
+
+  const arvCase = document.getElementById('i_maxOfferArv')?.value || 'likely';
+  const moArv = arvCase === 'best' ? d.arvBest : arvCase === 'worst' ? d.arvWorst : d.arvLikely;
+  const moNet = moArv * (1 - d.realtorPct) - d.sellerFees;
+  const targetProfit = num('i_targetProfit');
+  const maxOffer = moNet - d.rehabTotal - d.buyerFees - d.propTaxes - targetProfit - d.financingCost;
+  set('mo_label', 'Target profit: ' + fmt(targetProfit) + ' | ARV used: ' + fmt(moArv) + ' (' + arvCase + ')');
+  set('mo_amount', fmt(Math.max(0, maxOffer)));
+  const gap = d.purchase - maxOffer;
+  set('mo_detail', gap > 0
+    ? `Current ask is ${fmt(gap)} above the max offer. Purchase price needs to drop by ${fmt(gap)} to hit your target.`
+    : `Current ask is ${fmt(Math.abs(gap))} below the max offer — this deal hits your profit target at current price.`);
+
+  const badge = document.getElementById('h_badge');
+  if (badge) {
+    if (d.profit > 10000) { badge.className = 'status-badge badge-profit'; badge.textContent = 'Deal'; }
+    else if (d.profit > 0) { badge.className = 'status-badge badge-marginal'; badge.textContent = 'Marginal'; }
+    else { badge.className = 'status-badge badge-loss'; badge.textContent = 'Negative ROI'; }
+  }
+
+  drawProfitWaterfall('profit-wf-svg', d);
+  drawROIGauge('roi-gauge-svg', d.roi);
+  buildSensitivity();
+  autosave();
+}
+
+// ═══════════════════════════════════════════
+// MAIN RECALC — called from Inputs tab fields
+// Rebuilds $/SF display rows (rates/SF changed), updates stats and outputs
+// Does NOT touch comp input rows or lump sum input rows
+// ═══════════════════════════════════════════
+
+// Called from Inputs tab fields (SF, rates, contingency).
+// Re-renders rehab item costs (SF change affects $/SF items) and updates all outputs.
+function recalc() {
+  // Update cost cells in-place for $/SF items without rebuilding input rows
+  const sf = num('i_sf');
+  rehabItems.forEach((item, i) => {
+    if (item.mode === 'psf') {
+      const cost = item.rate * sf;
+      const costEl = document.getElementById(`ritem-cost-${i}`);
+      const budgetedEl = document.getElementById(`ritem-budgeted-${i}`);
+      if (costEl) costEl.textContent = fmt(cost);
+      if (budgetedEl) budgetedEl.textContent = item.included ? fmt(cost) : '—';
+    }
+  });
+  updateRehabTotals();
+  updateCompStats();
+  updateOutputs();
+}
+
+// ═══════════════════════════════════════════
+// INFO PANEL TOGGLE
+// ═══════════════════════════════════════════
+
+function toggleInfo(headerEl) {
+  const body = headerEl.nextElementSibling;
+  const caret = headerEl.querySelector('.info-caret');
+  body.classList.toggle('hidden');
+  caret.classList.toggle('closed');
+}
+
+// ═══════════════════════════════════════════
+// CHART: $/SF DISTRIBUTION (Comps tab)
+// ═══════════════════════════════════════════
+
+function drawCompChart(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const valid = comps.filter(c => c.salePrice > 0 && c.sf > 0 && c.included !== false);
+  if (valid.length < 2) {
+    el.innerHTML = '<p style="color:#a0aec0;font-size:12px;padding:4px 0;">Add (or check) at least 2 comps to see the distribution chart.</p>';
+    return;
+  }
+  const sorted = [...valid].map(c => ({ addr: c.address || '(no address)', psf: c.salePrice / c.sf }))
+    .sort((a, b) => a.psf - b.psf);
+  const avgPSF = getAvgPSF();
+  const medPSF = getMedianPSF();
+  const maxPSF = sorted[sorted.length - 1].psf;
+  const minPSF = sorted[0].psf;
+  const psfRange = maxPSF - minPSF || 1;
+
+  const W = 500, rowH = 32, topPad = 22, bottomPad = 28;
+  const H = sorted.length * rowH + topPad + bottomPad;
+  const labelW = 140, rightPad = 65, barAreaW = W - labelW - rightPad;
+
+  // Map psf to x position with 5% left padding so min bar is always visible
+  const psfToX = psf => labelW + Math.max(8, (psf - minPSF) / psfRange * (barAreaW - 8));
+
+  const avgX = psfToX(avgPSF);
+  const medX = psfToX(medPSF);
+
+  const rows = sorted.map((c, i) => {
+    const bx = labelW;
+    const bw = psfToX(c.psf) - labelW;
+    const y = topPad + i * rowH;
+    const cy = y + rowH / 2;
+    const isAbove = c.psf >= avgPSF;
+    const color = isAbove ? '#48bb78' : '#fc8181';
+    const label = c.addr.length > 20 ? c.addr.substring(0, 19) + '…' : c.addr;
+    return `<g>
+      <text x="${labelW - 6}" y="${cy + 4}" text-anchor="end" font-size="11" fill="#4a5568">${label}</text>
+      <rect x="${bx}" y="${cy - 9}" width="${Math.max(bw, 3)}" height="18" fill="${color}" rx="3" opacity="0.85"/>
+      <text x="${psfToX(c.psf) + 5}" y="${cy + 4}" font-size="11" fill="#2d3748" font-weight="600">$${c.psf.toFixed(0)}</text>
+    </g>`;
+  }).join('');
+
+  const avgLine = `<line x1="${avgX}" y1="${topPad - 8}" x2="${avgX}" y2="${H - bottomPad + 6}" stroke="#4299e1" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="${avgX}" y="${topPad - 10}" text-anchor="middle" font-size="10" fill="#4299e1" font-weight="700">Avg $${avgPSF.toFixed(0)}</text>`;
+
+  const medLine = Math.abs(medX - avgX) > 8 ? `<line x1="${medX}" y1="${topPad - 8}" x2="${medX}" y2="${H - bottomPad + 6}" stroke="#9f7aea" stroke-width="1.5" stroke-dasharray="2,4"/>
+    <text x="${medX}" y="${H - bottomPad + 18}" text-anchor="middle" font-size="10" fill="#9f7aea">Med $${medPSF.toFixed(0)}</text>` : '';
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible;">
+    <text x="0" y="14" font-size="11" fill="#a0aec0">Sorted low → high  (${sorted.length} comps)</text>
+    ${rows}
+    ${avgLine}
+    ${medLine}
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════
+// CHART: REHAB DONUT (Rehab tab)
+// ═══════════════════════════════════════════
+
+function drawRehabDonut(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const sf = num('i_sf');
+  const items = rehabItems
+    .filter(item => item.included)
+    .map(item => ({ name: item.name, val: item.mode === 'psf' ? item.rate * sf : item.amount, isSF: item.mode === 'psf' }))
+    .filter(x => x.val > 0);
+  if (!items.length) { el.innerHTML = ''; return; }
+  const total = items.reduce((s, x) => s + x.val, 0);
+  if (!total) { el.innerHTML = ''; return; }
+
+  items.sort((a, b) => b.val - a.val);
+
+  const cx = 80, cy = 80, rO = 66, rI = 36;
+  const sfColors  = ['#9f7aea','#b794f4','#d6bcfa','#805ad5','#6b46c1'];
+  const lumpColors = ['#4299e1','#63b3ed','#90cdf4','#3182ce','#2b6cb0','#48bb78','#f6ad55','#ed8936','#fc8181','#e53e3e','#38b2ac','#4fd1c5'];
+  let sfCI = 0, lumpCI = 0;
+
+  let startAngle = -Math.PI / 2;
+  const slices = items.map(item => {
+    const sweep = (item.val / total) * 2 * Math.PI;
+    const endAngle = startAngle + sweep;
+    const color = item.isSF ? (sfColors[sfCI++ % sfColors.length]) : (lumpColors[lumpCI++ % lumpColors.length]);
+    const ox1 = cx + rO * Math.cos(startAngle), oy1 = cy + rO * Math.sin(startAngle);
+    const ox2 = cx + rO * Math.cos(endAngle),   oy2 = cy + rO * Math.sin(endAngle);
+    const ix1 = cx + rI * Math.cos(startAngle), iy1 = cy + rI * Math.sin(startAngle);
+    const ix2 = cx + rI * Math.cos(endAngle),   iy2 = cy + rI * Math.sin(endAngle);
+    const large = sweep > Math.PI ? 1 : 0;
+    const path = `M ${ox1} ${oy1} A ${rO} ${rO} 0 ${large} 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${rI} ${rI} 0 ${large} 0 ${ix1} ${iy1} Z`;
+    startAngle = endAngle;
+    return { path, color, name: item.name, val: item.val, pct: Math.round(item.val / total * 100) };
+  });
+
+  const slicePaths = slices.map(s => `<path d="${s.path}" fill="${s.color}" stroke="white" stroke-width="1.5" opacity="0.92"/>`).join('');
+  const centerText = `<text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="11" font-weight="800" fill="#2d3748">${fmt(total)}</text>
+    <text x="${cx}" y="${cy + 9}" text-anchor="middle" font-size="9" fill="#a0aec0" letter-spacing="0.5">SUBTOTAL</text>`;
+
+  const W = 280, H = 160;
+  const legendLines = slices.slice(0, 8).map((s, i) => {
+    const lx = 170, ly = 10 + i * 19;
+    const nm = s.name.length > 14 ? s.name.substring(0, 13) + '…' : s.name;
+    return `<rect x="${lx}" y="${ly}" width="8" height="8" fill="${s.color}" rx="1.5"/>
+      <text x="${lx + 12}" y="${ly + 7.5}" font-size="10" fill="#4a5568">${nm}</text>
+      <text x="${W - 2}" y="${ly + 7.5}" text-anchor="end" font-size="10" fill="#718096" font-weight="600">${s.pct}%</text>`;
+  }).join('');
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%">
+    ${slicePaths}${centerText}${legendLines}
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════
+// CHART: PROFIT WATERFALL (Summary tab)
+// ═══════════════════════════════════════════
+
+function drawProfitWaterfall(containerId, d) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!d.arvBest || d.arvBest <= 0) { el.innerHTML = ''; return; }
+
+  const feesAndTax = d.buyerFees + d.sellerFees + d.propTaxes;
+  const profitVal = d.profit;
+  const isLoss = profitVal < 0;
+
+  const rawSegs = [
+    { label: 'Purchase',   value: d.purchase,      color: '#fc8181', dark: '#c53030' },
+    { label: 'Rehab',      value: d.rehabTotal,     color: '#f6ad55', dark: '#c05621' },
+    { label: 'Fees & Tax', value: feesAndTax,       color: '#fbd38d', dark: '#975a16' },
+    { label: 'Realtor',    value: d.realtorAmt,     color: '#fef08a', dark: '#92400e' },
+  ];
+  if (d.useFinancing && d.financingCost > 0) {
+    rawSegs.push({ label: 'Financing', value: d.financingCost, color: '#e9d8fd', dark: '#6b46c1' });
+  }
+  if (!isLoss) {
+    rawSegs.push({ label: 'Profit', value: profitVal, color: '#9ae6b4', dark: '#276749' });
+  }
+
+  const segs = rawSegs.filter(s => s.value > 0);
+  const barTotal = segs.reduce((s, x) => s + x.value, 0);
+
+  const W = 480, margin = 12, chartW = W - margin * 2;
+  const titleH = 22, barTop = titleH + 4, barH = 38, labelH = 34;
+  const H = titleH + barH + labelH + (isLoss ? 20 : 6);
+
+  // Title row
+  const arvLabel = `<text x="${W / 2}" y="15" text-anchor="middle" font-size="11" fill="#718096">
+    Best-Case ARV: <tspan font-weight="800" fill="#276749">${fmt(d.arvBest)}</tspan>${isLoss ? ' <tspan fill="#e53e3e">— costs exceed ARV</tspan>' : ''}
+  </text>`;
+
+  let x = margin;
+  const rects = segs.map((seg, i) => {
+    const w = Math.max((seg.value / barTotal) * chartW, 2);
+    const midX = x + w / 2;
+    // Label below bar: name on line 1, amount on line 2
+    const lbY1 = barTop + barH + 13, lbY2 = barTop + barH + 25;
+    const labelBelow = w >= 36 ?
+      `<text x="${midX}" y="${lbY1}" text-anchor="middle" font-size="9" fill="${seg.dark}" font-weight="700">${seg.label}</text>
+       <text x="${midX}" y="${lbY2}" text-anchor="middle" font-size="9" fill="${seg.dark}">${fmt(seg.value)}</text>` : '';
+    const rect = `<rect x="${x}" y="${barTop}" width="${w}" height="${barH}" fill="${seg.color}" opacity="0.93"/>`;
+    x += w;
+    return rect + labelBelow;
+  }).join('');
+
+  const border = `<rect x="${margin}" y="${barTop}" width="${chartW}" height="${barH}" fill="none" stroke="#d1d5db" stroke-width="1.5" rx="4"/>`;
+  const lossNote = isLoss
+    ? `<text x="${W/2}" y="${barTop + barH + labelH + 12}" text-anchor="middle" font-size="11" fill="#e53e3e" font-weight="700">⚠ Loss: ${fmt(Math.abs(profitVal))}</text>` : '';
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%">${arvLabel}${rects}${border}${lossNote}</svg>`;
+}
+
+// ═══════════════════════════════════════════
+// CHART: ROI GAUGE (Summary tab)
+// ═══════════════════════════════════════════
+
+function drawROIGauge(containerId, roi) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  // Range: -30% to +50% (80pp total)
+  const minROI = -0.30, maxROI = 0.50;
+  const range = maxROI - minROI;
+  const clampedROI = Math.max(minROI, Math.min(maxROI, roi));
+  const pct = (clampedROI - minROI) / range; // 0 to 1
+
+  const cx = 120, cy = 110, rO = 88, rI = 62;
+  const W = 240, H = 130;
+
+  // Point on gauge arc: pct in [0,1], angle goes from 180° (left) through 270° (top) to 360°(right)
+  function gaugePt(p, r) {
+    const a = (180 + p * 180) * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+
+  function gaugeArc(p0, p1, ro, ri) {
+    const [ox0, oy0] = gaugePt(p0, ro), [ox1, oy1] = gaugePt(p1, ro);
+    const [ix0, iy0] = gaugePt(p0, ri), [ix1, iy1] = gaugePt(p1, ri);
+    const span = (p1 - p0) * 180;
+    const lg = span > 180 ? 1 : 0;
+    return `M ${ox0} ${oy0} A ${ro} ${ro} 0 ${lg} 0 ${ox1} ${oy1} L ${ix1} ${iy1} A ${ri} ${ri} 0 ${lg} 1 ${ix0} ${iy0} Z`;
+  }
+
+  // Zone boundaries as pct
+  const zeroPct  = (0      - minROI) / range; // 0% ROI
+  const fifPct   = (0.15   - minROI) / range; // 15% ROI
+
+  const redArc    = gaugeArc(0, zeroPct, rO, rI);
+  const yellowArc = gaugeArc(zeroPct, fifPct, rO, rI);
+  const greenArc  = gaugeArc(fifPct, 1, rO, rI);
+
+  // Track arc (background)
+  const [tx0, ty0] = gaugePt(0, rO), [tx1, ty1] = gaugePt(1, rO);
+  const trackArc = `<path d="M ${tx0} ${ty0} A ${rO} ${rO} 0 0 0 ${tx1} ${ty1}" fill="none" stroke="#e2e8f0" stroke-width="1"/>`;
+
+  // Needle: line from center pointing in gauge direction
+  const needleRot = (pct - 0.5) * 180; // -90 to +90 degrees
+  const needle = `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - rO + 6}"
+    stroke="#1a202c" stroke-width="2.5" stroke-linecap="round"
+    transform="rotate(${needleRot}, ${cx}, ${cy})"/>`;
+  const hub = `<circle cx="${cx}" cy="${cy}" r="6" fill="#2d3748"/>
+    <circle cx="${cx}" cy="${cy}" r="3" fill="white"/>`;
+
+  // ROI text
+  const roiStr = roi >= 0 ? `+${(roi*100).toFixed(1)}%` : `${(roi*100).toFixed(1)}%`;
+  const roiColor = roi > 0.15 ? '#276749' : roi > 0 ? '#744210' : '#c53030';
+  const roiText = `<text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="20" font-weight="900" fill="${roiColor}">${roiStr}</text>
+    <text x="${cx}" y="${cy + 34}" text-anchor="middle" font-size="10" fill="#a0aec0" letter-spacing="0.5">RETURN ON INVESTMENT</text>`;
+
+  // Tick labels
+  const [lx, ly] = gaugePt(0, rO + 10);
+  const [rx, ry] = gaugePt(1, rO + 10);
+  const [tx, ty2] = gaugePt(0.5, rO + 10);
+  const tickLabels = `<text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="9" fill="#a0aec0">−30%</text>
+    <text x="${tx}" y="${ty2 - 4}" text-anchor="middle" font-size="9" fill="#a0aec0">+10%</text>
+    <text x="${rx}" y="${ry + 4}" text-anchor="middle" font-size="9" fill="#a0aec0">+50%</text>`;
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%">
+    <path d="${redArc}"    fill="#fed7d7" opacity="0.9"/>
+    <path d="${yellowArc}" fill="#fef9c3" opacity="0.9"/>
+    <path d="${greenArc}"  fill="#c6f6d5" opacity="0.9"/>
+    ${trackArc}${needle}${hub}${roiText}${tickLabels}
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════
+
+function collectState() {
+  const inputs = {};
+  document.querySelectorAll('input[id^="i_"], input[id^="sen_"]').forEach(el => { inputs[el.id] = el.value; });
+  ['i_maxOfferArv', 'i_useFinancing'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) inputs[id] = el.value;
+  });
+  return { version: 2, inputs, comps, rehabItems };
+}
+
+function applyState(state) {
+  const { inputs: saved, comps: savedComps, rehabItems: savedRI,
+          // legacy v1 fields — ignore gracefully
+          lumpSums: _ls, sfIncluded: _sfi } = state;
+  Object.entries(saved).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+  if (savedComps) comps = savedComps;
+  if (savedRI) rehabItems = savedRI;
+  toggleFinancingFields();
+}
+
+function toggleFinancingFields() {
+  const use = document.getElementById('i_useFinancing')?.value === 'yes';
+  const el = document.getElementById('financing-fields');
+  if (el) el.style.display = use ? 'block' : 'none';
+}
+
+// Save to localStorage as backup (silent, no user action needed)
+function autosave() {
+  try { localStorage.setItem('dealCalc_autosave', JSON.stringify(collectState())); } catch(e) {}
+}
+
+function loadAutosave() {
+  try {
+    const raw = localStorage.getItem('dealCalc_autosave');
+    if (!raw) return false;
+    applyState(JSON.parse(raw));
+    return true;
+  } catch(e) { return false; }
+}
+
+// Save deal as a self-contained HTML file — double-click to open, email to share
+async function saveDeal() {
+  const state = collectState();
+  const address = (document.getElementById('i_address').value || 'deal').trim();
+  const filename = address.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.html';
+
+  // Inject the deal data into a copy of this page's HTML
+  const dataTag = `<script id="deal-preload">window.__DEAL_DATA__=${JSON.stringify(state)};<\/script>`;
+  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  // Replace whatever is currently in the preload script tag (empty or previously saved data)
+  html = html.replace(/<script id="deal-preload">[\s\S]*?<\/script>/, dataTag);
+
+  // Try File System Access API (Chrome/Edge — lets user pick folder)
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Deal File', accept: { 'text/html': ['.html'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(html);
+      await writable.close();
+      flashBtn('Saved ✓', '#48bb78');
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback: trigger browser download
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  flashBtn('Saved ✓', '#48bb78');
+}
+
+function flashBtn(text, color) {
+  const btn = document.getElementById('save-btn');
+  if (!btn) return;
+  btn.textContent = text; btn.style.background = color;
+  setTimeout(() => { btn.textContent = 'Save Deal'; btn.style.background = '#4299e1'; }, 2000);
+}
+
+function newDeal() {
+  if (!confirm('Clear all data and start a new deal?')) return;
+  document.getElementById('i_address').value = '';
+  document.getElementById('i_desc').value = '';
+  document.getElementById('i_sf').value = '';
+  document.getElementById('i_purchase').value = '';
+  document.getElementById('i_buyerFees').value = '1500';
+  document.getElementById('i_sellerFees').value = '2500';
+  document.getElementById('i_realtorPct').value = '3.5';
+  document.getElementById('i_taxRate').value = '1.5';
+  document.getElementById('i_holdMonths').value = '4';
+  document.getElementById('i_contingency').value = '10';
+  document.getElementById('i_bestPct').value = '100';
+  document.getElementById('i_likelyPct').value = '90';
+  document.getElementById('i_worstPct').value = '80';
+  document.getElementById('i_targetProfit').value = '50000';
+  document.getElementById('i_useFinancing').value = 'no';
+  toggleFinancingFields();
+  comps = [{ address: '', salePrice: 0, sf: 0, notes: '', included: true, condition: 'well-kept' }];
+  rehabItems = JSON.parse(JSON.stringify(DEFAULT_REHAB_ITEMS));
+  renderComps();
+  renderRehabItems();
+  updateRehabTotals();
+  updateOutputs();
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+
+// If this file was saved with deal data embedded, load that.
+// Otherwise fall back to the autosaved session in localStorage.
+if (window.__DEAL_DATA__) {
+  applyState(window.__DEAL_DATA__);
+} else {
+  loadAutosave();
+}
+renderComps();
+renderRehabItems();
+updateRehabTotals();
+updateOutputs();
+</script>
+</body>
+</html>
